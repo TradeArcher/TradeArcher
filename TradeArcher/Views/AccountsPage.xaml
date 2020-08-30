@@ -1,0 +1,89 @@
+﻿<Page
+    x:Class="TradeArcher.Views.AccountsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:cm="using:Caliburn.Micro"
+    xmlns:models="using:TradeArcher.Core.Models"
+    xmlns:interactivity="using:Microsoft.Xaml.Interactivity"
+    xmlns:core="using:Microsoft.Xaml.Interactions.Core"
+    x:Uid="AccountsTabPage"
+    Style="{StaticResource PageStyle}"
+    mc:Ignorable="d">
+
+    <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="PageStates">
+                <VisualState x:Name="List">
+                    <VisualState.Setters>
+                        <Setter Target="AddOrUpdatePanel.Visibility" Value="Collapsed" />
+                        <Setter Target="AccountsListPanel.Visibility" Value="Visible" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="AddOrUpdate">
+                    <VisualState.Setters>
+                        <Setter Target="AddOrUpdatePanel.Visibility" Value="Visible" />
+                        <Setter Target="AccountsListPanel.Visibility" Value="Collapsed" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <interactivity:Interaction.Behaviors>
+            <core:DataTriggerBehavior Binding="{x:Bind ViewModel.State.ToString(), Mode=OneWay}" ComparisonCondition="Equal" Value="List">
+                <core:GoToStateAction StateName="List" />
+            </core:DataTriggerBehavior>
+            <core:DataTriggerBehavior Binding="{x:Bind ViewModel.State.ToString(), Mode=OneWay}" ComparisonCondition="Equal" Value="AddOrUpdate">
+                <core:GoToStateAction StateName="AddOrUpdate" />
+            </core:DataTriggerBehavior>
+        </interactivity:Interaction.Behaviors>
+        <Grid x:Name="AccountsListPanel"
+            Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+            <!--
+                The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
+                Place your content here.
+            -->
+            <StackPanel>
+                <Button x:Name="AddAccount" x:Uid="AccountsPage_AddAccountButton"/>
+                <ListView x:Name="Accounts" ItemsSource="{x:Bind ViewModel.Accounts, Mode=OneWay}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Account">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Account Name: " />
+                                    <TextBlock Margin="{StaticResource SmallLeftMargin}" VerticalAlignment="Center" Text="{x:Bind Name}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Display Name: " />
+                                    <TextBlock Margin="{StaticResource SmallLeftMargin}" VerticalAlignment="Center" Text="{x:Bind DisplayName}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Broker: " />
+                                    <TextBlock Margin="{StaticResource SmallLeftMargin}" VerticalAlignment="Center" Text="{x:Bind Broker.Name}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <Button x:Name="EditAccount" cm:Message.Attach="EditAccount($dataContext)" x:Uid="AccountsPage_EditAccount" Margin="0,0,5,0" />
+                                    <Button x:Name="DeleteAccount" cm:Message.Attach="DeleteAccount($dataContext)" x:Uid="AccountsPage_DeleteAccount"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+        </Grid>
+        <Grid x:Name="AddOrUpdatePanel" Visibility="Collapsed">
+            <StackPanel Grid.Row="0" Grid.Column="0">
+                <TextBlock Text="Account Name:" />
+                <TextBox Text="{x:Bind ViewModel.SelectedAccount.Name, Mode=TwoWay}" />
+                <TextBlock Text="Display Name:" />
+                <TextBox Text="{x:Bind ViewModel.SelectedAccount.DisplayName, Mode=TwoWay}" />
+                <TextBlock Text="Broker:" />
+                <ComboBox ItemsSource="{x:Bind ViewModel.Brokers, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedBroker, Mode=TwoWay}" />
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <Button x:Name="SaveAccount" x:Uid="AccountsPage_SaveAddOrUpdateAccount" Margin="0,0,5,0" />
+                    <Button x:Name="CancelAddOrUpdateAccount" x:Uid="AccountsPage_CancelAddOrUpdateAccount"/>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

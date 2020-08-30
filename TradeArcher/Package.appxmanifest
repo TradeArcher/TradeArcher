@@ -15,8 +15,8 @@
   <mp:PhoneIdentity PhoneProductId="73DAA4B8-BEDC-433A-95C1-D39B269566D0" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>TradeArcher</DisplayName>
-    <PublisherDisplayName>cswain</PublisherDisplayName>
+    <DisplayName>TradeArcher2020</DisplayName>
+    <PublisherDisplayName>TradeArcher2020</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -38,7 +38,7 @@
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="ms-resource:AppDescription"
         BackgroundColor="transparent">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
 

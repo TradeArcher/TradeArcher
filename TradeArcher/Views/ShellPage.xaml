@@ -27,7 +27,17 @@
             Or to use an IconElement instead of a Symbol see https://github.com/Microsoft/WindowsTemplateStudio/blob/release/docs/UWP/projectTypes/navigationpane.md
             Edit String/en-US/Resources.resw: Add a menu item title for each page
             -->
-            <winui:NavigationViewItem x:Uid="Shell_Main" Icon="Document" helpers:NavHelper.NavigateTo="views:MainPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Dashboard" Icon="Home" helpers:NavHelper.NavigateTo="views:MainPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Analyze" helpers:NavHelper.NavigateTo="views:AnalyzePage">
+                <winui:NavigationViewItem.Icon>
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE9D2;" />
+                </winui:NavigationViewItem.Icon>
+            </winui:NavigationViewItem>
+            <winui:NavigationViewItem x:Uid="Shell_Journal" Icon="PreviewLink"  helpers:NavHelper.NavigateTo="views:JournalPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Trades" Icon="List"  helpers:NavHelper.NavigateTo="views:TradesPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Strategies" Icon="OutlineStar"  helpers:NavHelper.NavigateTo="views:StrategiesPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Import" Icon="Import"  helpers:NavHelper.NavigateTo="views:ImportPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Accounts" Icon="Account"  helpers:NavHelper.NavigateTo="views:AccountsPage" />
         </winui:NavigationView.MenuItems>
         <i:Interaction.Behaviors>
             <behaviors:NavigationViewHeaderBehavior

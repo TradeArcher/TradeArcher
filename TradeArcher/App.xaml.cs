@@ -34,14 +34,15 @@ namespace TradeArcher
             EnteredBackground += App_EnteredBackground;
             Resuming += App_Resuming;
 
-            // TODO WTS: Add your app in the app center and set your secret here. More at https://docs.microsoft.com/appcenter/sdk/getting-started/uwp
-            AppCenter.Start("{Your App Secret}", typeof(Analytics), typeof(Crashes));
+            AppCenter.Start("39b15924-59cb-43b7-ac49-f5ff9f622526", typeof(Analytics), typeof(Crashes));
             UnhandledException += OnAppUnhandledException;
 
             Initialize();
 
             // Deferred execution until used. Check https://docs.microsoft.com/dotnet/api/system.lazy-1 for further info on Lazy<T> class.
             _activationService = new Lazy<ActivationService>(CreateActivationService);
+
+            DbInitializer.Initialize();
         }
 
         protected override async void OnLaunched(LaunchActivatedEventArgs args)
@@ -77,6 +78,13 @@ namespace TradeArcher
             _container.PerRequest<ShellViewModel>();
             _container.PerRequest<MainViewModel>();
             _container.PerRequest<SettingsViewModel>();
+            _container.PerRequest<AccountsViewModel>();
+            _container.PerRequest<BrokersViewModel>();
+            _container.PerRequest<AnalyzeViewModel>();
+            _container.PerRequest<ImportViewModel>();
+            _container.PerRequest<JournalViewModel>();
+            _container.PerRequest<StrategiesPageViewModel>();
+            _container.PerRequest<TradesViewModel>();
         }
 
         protected override object GetInstance(Type service, string key)

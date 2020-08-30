@@ -118,15 +118,15 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AppDisplayName" xml:space="preserve">
-    <value>TradeArcher</value>
+    <value>TradeArcher2020</value>
     <comment>Application display name</comment>
   </data>
   <data name="AppDescription" xml:space="preserve">
-    <value>TradeArcher</value>
+    <value>TradeArcher2020</value>
     <comment>Application description</comment>
   </data>
-  <data name="Shell_Main.Content" xml:space="preserve">
-    <value>Main</value>
+  <data name="Shell_Dashboard.Content" xml:space="preserve">
+    <value>Dashboard</value>
     <comment>Navigation view item name for Main</comment>
   </data>
   <data name="ExceptionSettingsStorageExtensionsFileNameIsNullOrEmpty" xml:space="preserve">
@@ -145,26 +145,26 @@
   <data name="Settings_Theme_Light.Content" xml:space="preserve">
     <value>Light</value>
   </data>
-  <data name="Settings_About.Text" xml:space="preserve">    
+  <data name="Settings_About.Text" xml:space="preserve">
     <value>About this application</value>
   </data>
-  <data name="Settings_AboutDescription.Text" xml:space="preserve">    
+  <data name="Settings_AboutDescription.Text" xml:space="preserve">
     <value>Settings page placeholder text.  Your app description goes here.</value>
   </data>
-  <data name="Settings_PrivacyTermsLink.Content" xml:space="preserve">    
+  <data name="Settings_PrivacyTermsLink.Content" xml:space="preserve">
     <value>Privacy Statement</value>
   </data>
-  <data name="Settings_PrivacyTermsLink.NavigateUri" xml:space="preserve">  
+  <data name="Settings_PrivacyTermsLink.NavigateUri" xml:space="preserve">
     <value>https://YourPrivacyUrlGoesHere/</value>
   </data>
-  <data name="Settings_Personalization.Text" xml:space="preserve">   
+  <data name="Settings_Personalization.Text" xml:space="preserve">
     <value>Personalization</value>
   </data>
-  <data name="ExceptionEnumToBooleanConverterValueMustBeAnEnum" xml:space="preserve">   
+  <data name="ExceptionEnumToBooleanConverterValueMustBeAnEnum" xml:space="preserve">
     <value>value must be an Enum!</value>
     <comment>Value must be an Enum in enum to boolean converter</comment>
   </data>
-  <data name="ExceptionEnumToBooleanConverterParameterMustBeAnEnumName" xml:space="preserve">   
+  <data name="ExceptionEnumToBooleanConverterParameterMustBeAnEnumName" xml:space="preserve">
     <value>parameter must be an Enum name!</value>
     <comment>Parameter must be an Enum name in enum to boolean converter</comment>
   </data>
@@ -220,5 +220,44 @@ Suspendisse dui purus, scelerisque at, vulputate vitae, pretium mattis, nunc. Ma
   <data name="FeedbackHub_Link.Content" xml:space="preserve">
     <value>Feedback</value>
     <comment>Displayed as the link to launching the Feedback Hub.</comment>
+  </data>
+  <data name="Shell_Analyze.Content" xml:space="preserve">
+    <value>Analyze</value>
+  </data>
+  <data name="Shell_Import.Content" xml:space="preserve">
+    <value>Import Trades</value>
+  </data>
+  <data name="Shell_Journal.Content" xml:space="preserve">
+    <value>Journal</value>
+  </data>
+  <data name="Shell_Trades.Content" xml:space="preserve">
+    <value>Trades</value>
+  </data>
+  <data name="Shell_Accounts.Content" xml:space="preserve">
+    <value>Accounts</value>
+  </data>
+  <data name="AccountsMain_Accounts.Content" xml:space="preserve">
+    <value>Accounts</value>
+  </data>
+  <data name="AccountsMain_Brokers.Content" xml:space="preserve">
+    <value>Brokers</value>
+  </data>
+  <data name="Shell_Strategies.Content" xml:space="preserve">
+    <value>Strategies</value>
+  </data>
+  <data name="AccountsPage_AddAccountButton.Content" xml:space="preserve">
+    <value>Add New...</value>
+  </data>
+  <data name="AccountsPage_CancelAddOrUpdateAccount.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AccountsPage_SaveAddOrUpdateAccount.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="AccountsPage_DeleteAccount.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="AccountsPage_EditAccount.Content" xml:space="preserve">
+    <value>Edit</value>
   </data>
 </root>
