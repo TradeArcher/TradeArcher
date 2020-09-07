@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toolkit="using:Microsoft.Toolkit.Uwp.UI.Controls"
     Style="{StaticResource PageStyle}"
     mc:Ignorable="d">
 
@@ -14,7 +15,9 @@
                 The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
                 Place your content here.
             -->
-            <TextBlock Text="This page will allow you to view and edit all of your trades for each Broker/Account." />
+            <toolkit:DataGrid x:Name="TradesDataGrid" ItemsSource="{x:Bind ViewModel.Trades, Mode=OneWay}" IsReadOnly="True">
+
+            </toolkit:DataGrid>
         </Grid>
     </Grid>
 </Page>

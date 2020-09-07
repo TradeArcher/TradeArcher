@@ -26,7 +26,7 @@ namespace TradeArcher.Core.Models
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Account>()
-                .HasOne<Broker>()
+                .HasOne<Broker>(a => a.Broker)
                 .WithMany(b => b.Accounts);
 
             modelBuilder.Entity<Account>()
@@ -35,7 +35,7 @@ namespace TradeArcher.Core.Models
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Trade>()
-                .HasOne<Account>()
+                .HasOne<Account>(t => t.Account)
                 .WithMany(a => a.Trades);
 
             modelBuilder.Entity<Broker>().HasData(new Broker { BrokerId = 1, Name = "TD Ameritrade" }, new Broker { BrokerId = 2, Name = "ThinkOrSwim" });
@@ -51,7 +51,7 @@ namespace TradeArcher.Core.Models
         [StringLength(255, ErrorMessage = "Name cannot be more than 255 characters")]
         public string Name { get; set; }
 
-        public virtual ICollection<Account> Accounts { get; } = new List<Account>();
+        public virtual ICollection<Account> Accounts { get; private set; } = new List<Account>();
     }
 
     public class Account
@@ -67,10 +67,10 @@ namespace TradeArcher.Core.Models
 
         [Display(Name = "Broker")]
         [Required(ErrorMessage = "A broker is required.")]
-        [ForeignKey("BrokerId")]
+        //[ForeignKey("BrokerId")]
         public virtual Broker Broker { get; set; }
 
-        public virtual ICollection<Trade> Trades { get; } = new List<Trade>();
+        public virtual ICollection<Trade> Trades { get; private set; } = new List<Trade>();
     }
 
     
@@ -93,7 +93,7 @@ namespace TradeArcher.Core.Models
         public DateTime ExecutionTime { get; set; }
 
         [Display(Name = "Order Expiration")]
-        public DateTime Expiration { get; set; }
+        public DateTime? Expiration { get; set; }
 
         [Required(ErrorMessage = "Spread is required.")]
         public OrderSpread Spread { get; set; }
@@ -131,30 +131,67 @@ namespace TradeArcher.Core.Models
 
         [Display(Name = "Account")]
         [Required(ErrorMessage = "An account is required.")]
-        [ForeignKey("AccountId")]
+        //[ForeignKey("AccountId")]
         public virtual Account Account { get; set; }
 
+        public bool Compare(Trade trade)
+        {
+            return trade.ExecutionTime == ExecutionTime
+                && trade.Expiration == Expiration
+                && trade.Spread == Spread
+                && trade.OrderSide == OrderSide
+                && trade.Quantity == Quantity
+                && trade.Symbol == Symbol
+                && trade.Price == Price
+                && trade.NetPrice == NetPrice
+                && trade.TradeType == TradeType
+                && trade.OrderType == OrderType
+                && trade.Strike == Strike
+                && trade.PosEffect == PosEffect;
+        }
+
+        public void Update(Trade trade)
+        {
+            ExecutionTime = trade.ExecutionTime;
+            Expiration = trade.Expiration;
+            Spread = trade.Spread;
+            OrderSide = trade.OrderSide;
+            Quantity = trade.Quantity;
+            Symbol = trade.Symbol;
+            Price = trade.Price;
+            NetPrice = trade.NetPrice;
+            TradeType = trade.TradeType;
+            OrderType = trade.OrderType;
+            Strike = trade.Strike;
+            PosEffect = trade.PosEffect;
+        }
     }
 
     public enum OrderSpread
     {
+        Unknown,
         Stock
     }
 
     public enum OrderSide
     {
+        Unknown,
         Buy,
         Sell
     }
 
     public enum OrderType
     {
+        Unknown,
         Limit,
-        Market
+        Market,
+        Stop,
+        StopLimit
     }
 
     public enum TradeType
     {
+        Unknown,
         Stock,
         Future,
         Option,

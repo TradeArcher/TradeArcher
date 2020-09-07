@@ -260,4 +260,13 @@ Suspendisse dui purus, scelerisque at, vulputate vitae, pretium mattis, nunc. Ma
   <data name="AccountsPage_EditAccount.Content" xml:space="preserve">
     <value>Edit</value>
   </data>
+  <data name="ImportPage_Browse.Content" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="ImportPage_Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ImportPage_ImportTrades.Content" xml:space="preserve">
+    <value>Import</value>
+  </data>
 </root>

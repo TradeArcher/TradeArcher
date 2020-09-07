@@ -150,7 +150,7 @@ namespace TradeArcher.ViewModels
         {
             using (var context = new TradeArcherDataContext())
             {
-                Accounts = new ObservableCollection<Account>(context.Accounts.AsQueryable().Include(a => a.Broker));
+                Accounts = new ObservableCollection<Account>(context.Accounts.Include(a => a.Broker));
             }
         }
 

@@ -14,6 +14,7 @@ using TradeArcher.ViewModels;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.UI.Xaml;
+using TradeArcher.Core.Services;
 
 namespace TradeArcher
 {
@@ -85,6 +86,7 @@ namespace TradeArcher
             _container.PerRequest<JournalViewModel>();
             _container.PerRequest<StrategiesPageViewModel>();
             _container.PerRequest<TradesViewModel>();
+            _container.PerRequest<TradesImporterService>();
         }
 
         protected override object GetInstance(Type service, string key)

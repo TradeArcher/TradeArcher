@@ -13,6 +13,8 @@ namespace TradeArcher.Core.Helpers
                 //Migrate the Database
                 try
                 {
+                    //context.Database.EnsureDeleted();
+                    //context.Database.EnsureCreated();
                     context.Database.Migrate();
                 }
                 catch (Exception e)

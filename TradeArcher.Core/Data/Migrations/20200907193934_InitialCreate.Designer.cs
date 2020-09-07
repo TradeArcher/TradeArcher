@@ -9,8 +9,8 @@ using TradeArcher.Core.Models;
 namespace TradeArcher.Core.Data.Migrations
 {
     [DbContext(typeof(TradeArcherDataContext))]
-    [Migration("20200829185527_InitialCreation")]
-    partial class InitialCreation
+    [Migration("20200907193934_InitialCreate")]
+    partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -27,9 +27,6 @@ namespace TradeArcher.Core.Data.Migrations
                     b.Property<int>("BrokerId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("BrokerId1")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("DisplayName")
                         .HasColumnType("TEXT")
                         .HasMaxLength(255);
@@ -41,8 +38,6 @@ namespace TradeArcher.Core.Data.Migrations
                     b.HasKey("AccountId");
 
                     b.HasIndex("BrokerId");
-
-                    b.HasIndex("BrokerId1");
 
                     b.ToTable("Accounts");
                 });
@@ -83,13 +78,10 @@ namespace TradeArcher.Core.Data.Migrations
                     b.Property<int>("AccountId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("AccountId1")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime>("ExecutionTime")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("Expiration")
+                    b.Property<DateTime?>("Expiration")
                         .HasColumnType("TEXT");
 
                     b.Property<double>("NetPrice")
@@ -130,38 +122,24 @@ namespace TradeArcher.Core.Data.Migrations
 
                     b.HasIndex("AccountId");
 
-                    b.HasIndex("AccountId1");
-
                     b.ToTable("TradeHistory");
                 });
 
             modelBuilder.Entity("TradeArcher.Core.Models.Account", b =>
                 {
-                    b.HasOne("TradeArcher.Core.Models.Broker", null)
+                    b.HasOne("TradeArcher.Core.Models.Broker", "Broker")
                         .WithMany("Accounts")
                         .HasForeignKey("BrokerId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("TradeArcher.Core.Models.Broker", "Broker")
-                        .WithMany()
-                        .HasForeignKey("BrokerId1")
-                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("TradeArcher.Core.Models.Trade", b =>
                 {
-                    b.HasOne("TradeArcher.Core.Models.Account", null)
+                    b.HasOne("TradeArcher.Core.Models.Account", "Account")
                         .WithMany("Trades")
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("TradeArcher.Core.Models.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId1")
-                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

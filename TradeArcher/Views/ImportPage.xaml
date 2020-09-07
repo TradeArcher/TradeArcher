@@ -14,7 +14,21 @@
                 The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
                 Place your content here.
             -->
-            <TextBlock Text="This page will allow you select a file to import your trades from a particular account." />
+            <StackPanel>
+                <TextBlock Text="Select Broker:" />
+                <ComboBox ItemsSource="{x:Bind ViewModel.Brokers, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedBroker, Mode=TwoWay}" />
+                <TextBlock Text="Select Account:" />
+                <ComboBox ItemsSource="{x:Bind ViewModel.Accounts, Mode=OneWay}" DisplayMemberPath="DisplayName" SelectedItem="{x:Bind ViewModel.SelectedAccount, Mode=TwoWay}" />
+                <TextBlock Text="Select File:" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBox Text="{x:Bind ViewModel.SelectedFile, Mode=TwoWay}" IsReadOnly="True" />
+                    <Button x:Name="SelectFileAsync" x:Uid="ImportPage_Browse" Margin="0,0,5,0" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <Button x:Name="ImportTades" x:Uid="ImportPage_ImportTrades" Margin="0,0,5,0" />
+                    <Button x:Name="CancelImport" x:Uid="ImportPage_Cancel"/>
+                </StackPanel>
+            </StackPanel>
         </Grid>
     </Grid>
 </Page>
