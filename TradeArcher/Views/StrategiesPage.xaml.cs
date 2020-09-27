@@ -15,9 +15,9 @@ namespace TradeArcher.Views
             this.InitializeComponent();
         }
 
-        private StrategiesPageViewModel ViewModel
+        private StrategiesViewModel ViewModel
         {
-            get { return DataContext as StrategiesPageViewModel; }
+            get { return DataContext as StrategiesViewModel; }
         }
     }
 }

@@ -1,0 +1,46 @@
+﻿<Page
+    x:Class="TradeArcher.Views.BackTestAnalyzePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:charting="using:WinRTXamlToolkit.Controls.DataVisualization.Charting"
+    Style="{StaticResource PageStyle}"
+    mc:Ignorable="d">
+
+    <Page.TopAppBar>
+        <CommandBar>
+            <CommandBar.PrimaryCommands>
+                <AppBarElementContainer>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Strategy: " />
+                        <ComboBox ItemsSource="{x:Bind ViewModel.Strategies, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedStrategy, Mode=TwoWay}" />
+                        <TextBlock Text="Back Test Session: " />
+                        <ComboBox ItemsSource="{x:Bind ViewModel.SelectedStrategy.Sessions, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedSession, Mode=TwoWay}">
+                            <ComboBox.Items>
+                                <ComboBoxItem>All</ComboBoxItem>
+                            </ComboBox.Items>
+                        </ComboBox>
+                    </StackPanel>
+                </AppBarElementContainer>
+            </CommandBar.PrimaryCommands>
+        </CommandBar>
+    </Page.TopAppBar>
+
+    <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
+        <Grid
+            Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+            <!--
+                The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
+                Place your content here.
+            -->
+
+            <charting:Chart x:Name="PnLChart" Title="Profit and Loss" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Style="{StaticResource ScrollableChart}">
+                <charting:Chart.Series>
+                    <charting:LineSeries ItemsSource="{x:Bind ViewModel.ProfitLossData, Mode=OneWay}" IndependentValuePath="Date" DependentValuePath="PnL"/>
+                </charting:Chart.Series>
+            </charting:Chart>
+
+        </Grid>
+    </Grid>
+</Page>

@@ -84,9 +84,12 @@ namespace TradeArcher
             _container.PerRequest<AnalyzeViewModel>();
             _container.PerRequest<ImportViewModel>();
             _container.PerRequest<JournalViewModel>();
-            _container.PerRequest<StrategiesPageViewModel>();
             _container.PerRequest<TradesViewModel>();
+            _container.PerRequest<StrategiesViewModel>();
+            _container.PerRequest<BackTestAnalyzeViewModel>();
+            _container.PerRequest<ImportBackTestsViewModel>();
             _container.PerRequest<TradesImporterService>();
+            _container.PerRequest<BackTestSessionImporterService>();
         }
 
         protected override object GetInstance(Type service, string key)

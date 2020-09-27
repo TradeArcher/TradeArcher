@@ -33,11 +33,23 @@
                     <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE9D2;" />
                 </winui:NavigationViewItem.Icon>
             </winui:NavigationViewItem>
-            <winui:NavigationViewItem x:Uid="Shell_Journal" Icon="PreviewLink"  helpers:NavHelper.NavigateTo="views:JournalPage" />
-            <winui:NavigationViewItem x:Uid="Shell_Trades" Icon="List"  helpers:NavHelper.NavigateTo="views:TradesPage" />
-            <winui:NavigationViewItem x:Uid="Shell_Strategies" Icon="OutlineStar"  helpers:NavHelper.NavigateTo="views:StrategiesPage" />
-            <winui:NavigationViewItem x:Uid="Shell_Import" Icon="Import"  helpers:NavHelper.NavigateTo="views:ImportPage" />
-            <winui:NavigationViewItem x:Uid="Shell_Accounts" Icon="Account"  helpers:NavHelper.NavigateTo="views:AccountsPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Journal" Icon="PreviewLink" helpers:NavHelper.NavigateTo="views:JournalPage" />
+            <winui:NavigationViewItem x:Uid="Shell_Trades" Icon="List"  helpers:NavHelper.NavigateTo="views:TradesPage">
+                <winui:NavigationViewItem.MenuItems>
+                    <winui:NavigationViewItem x:Uid="Shell_Accounts" Icon="Account" helpers:NavHelper.NavigateTo="views:AccountsPage" />
+                    <winui:NavigationViewItem x:Uid="Shell_Import" Icon="Import"  helpers:NavHelper.NavigateTo="views:ImportPage" />
+                </winui:NavigationViewItem.MenuItems>
+            </winui:NavigationViewItem>
+            <winui:NavigationViewItem x:Uid="Shell_Strategies" Icon="OutlineStar" helpers:NavHelper.NavigateTo="views:StrategiesPage">
+                <winui:NavigationViewItem.MenuItems>
+                    <winui:NavigationViewItem x:Uid="Shell_Analyze" helpers:NavHelper.NavigateTo="views:BackTestAnalyzePage">
+                        <winui:NavigationViewItem.Icon>
+                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE9D2;" />
+                        </winui:NavigationViewItem.Icon>
+                    </winui:NavigationViewItem>
+                    <winui:NavigationViewItem x:Uid="Shell_Import" Icon="Import" helpers:NavHelper.NavigateTo="views:ImportBackTestsPage" />
+                </winui:NavigationViewItem.MenuItems>
+            </winui:NavigationViewItem>
         </winui:NavigationView.MenuItems>
         <i:Interaction.Behaviors>
             <behaviors:NavigationViewHeaderBehavior

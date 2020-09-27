@@ -3,8 +3,8 @@ using TradeArcher.Core.Models;
 
 namespace TradeArcher.Core.Services
 {
-    public interface IFileParser
+    public interface IFileParser<out T>
     {
-        IList<Trade> ParseFile(byte[] fileData);
+        T ParseFile(byte[] fileData);
     }
 }

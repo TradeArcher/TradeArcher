@@ -6,11 +6,12 @@ using System.Linq;
 using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
+using TradeArcher.Core.Helpers;
 using TradeArcher.Core.Models;
 
 namespace TradeArcher.Core.Services
 {
-    public class ThinkOrSwimFileParser : IFileParser
+    public class ThinkOrSwimFileParser : IFileParser<IList<Trade>>
     {
         public IList<Trade> ParseFile(byte[] fileData)
         {
@@ -108,33 +109,9 @@ namespace TradeArcher.Core.Services
                 return DateTime.MinValue;
             }
 
-            string[] formats = {
-                "M/d/yyyy h:mm:ss tt", 
-                "M/d/yyyy h:mm tt", 
-                "MM/dd/yyyy hh:mm:ss", 
-                "M/d/yyyy h:mm:ss", 
-                "M/d/yyyy hh:mm tt", 
-                "M/d/yyyy hh tt", 
-                "M/d/yyyy h:mm", 
-                "M/d/yyyy h:mm", 
-                "MM/dd/yyyy hh:mm", 
-                "M/dd/yyyy hh:mm",
-                "MM/d/yyyy HH:mm:ss.ffffff",
-                "M/d/yy h:mm:ss tt", 
-                "M/d/yy h:mm tt", 
-                "MM/dd/yy hh:mm:ss", 
-                "M/d/yy h:mm:ss", 
-                "M/d/yy hh:mm tt", 
-                "M/d/yy hh tt", 
-                "M/d/yy h:mm", 
-                "M/d/yy h:mm", 
-                "MM/dd/yy hh:mm", 
-                "M/dd/yy hh:mm",
-                "MM/d/yy HH:mm:ss.ffffff",
-            };
             var cultureInfo = new CultureInfo("en-US");
             cultureInfo.Calendar.TwoDigitYearMax = 2099;
-            return DateTime.ParseExact(text, formats, cultureInfo, DateTimeStyles.None);
+            return DateTime.ParseExact(text, Constants.SupportedDateFormats, cultureInfo, DateTimeStyles.None);
         }
     }
 
@@ -147,33 +124,9 @@ namespace TradeArcher.Core.Services
                 return null;
             }
 
-            string[] formats = {
-                "M/d/yyyy h:mm:ss tt", 
-                "M/d/yyyy h:mm tt", 
-                "MM/dd/yyyy hh:mm:ss", 
-                "M/d/yyyy h:mm:ss", 
-                "M/d/yyyy hh:mm tt", 
-                "M/d/yyyy hh tt", 
-                "M/d/yyyy h:mm", 
-                "M/d/yyyy h:mm", 
-                "MM/dd/yyyy hh:mm", 
-                "M/dd/yyyy hh:mm",
-                "MM/d/yyyy HH:mm:ss.ffffff",
-                "M/d/yy h:mm:ss tt", 
-                "M/d/yy h:mm tt", 
-                "MM/dd/yy hh:mm:ss", 
-                "M/d/yy h:mm:ss", 
-                "M/d/yy hh:mm tt", 
-                "M/d/yy hh tt", 
-                "M/d/yy h:mm", 
-                "M/d/yy h:mm", 
-                "MM/dd/yy hh:mm", 
-                "M/dd/yy hh:mm",
-                "MM/d/yy HH:mm:ss.ffffff",
-            };
             var cultureInfo = new CultureInfo("en-US");
             cultureInfo.Calendar.TwoDigitYearMax = 2099;
-            return DateTime.ParseExact(text, formats, cultureInfo, DateTimeStyles.None);
+            return DateTime.ParseExact(text, Constants.SupportedDateFormats, cultureInfo, DateTimeStyles.None);
         }
     }
 
@@ -243,9 +196,9 @@ namespace TradeArcher.Core.Services
             switch (text.ToUpper())
             {
                 case "BUY":
-                    return OrderSide.Buy;
+                    return OrderSide.BuyToOpen;
                 case "SELL":
-                    return OrderSide.Sell;
+                    return OrderSide.SellToClose;
                 default:
                     return OrderSide.Unknown;
             }

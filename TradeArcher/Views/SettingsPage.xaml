@@ -9,9 +9,9 @@
     Style="{StaticResource PageStyle}"
     xmlns:xaml="using:Windows.UI.Xaml"
     mc:Ignorable="d">
-    <Page.Resources>
+    <!--<Page.Resources>
         <helper:EnumToBooleanConverter x:Key="EnumToBooleanConverter" EnumType="ElementTheme" />
-    </Page.Resources>
+    </Page.Resources>-->
 
     <Grid Margin="{StaticResource MediumLeftRightMargin}">
         <StackPanel
