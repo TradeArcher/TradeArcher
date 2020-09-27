@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:charting="using:WinRTXamlToolkit.Controls.DataVisualization.Charting"
     Style="{StaticResource PageStyle}"
     mc:Ignorable="d">
 
@@ -14,7 +15,20 @@
                 The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
                 Place your content here.
             -->
-            <TextBlock Text="This page will allow you to view your trading stats across all accounts or filter by account, broker and date." />
+            <!--<uwp:CartesianChart  LegendLocation="Right" >
+                <uwp:CartesianChart.AxisY>
+                    <uwp:Axis Title="P/L" LabelFormatter="{Binding YFormatter}"></uwp:Axis>
+                </uwp:CartesianChart.AxisY>
+                <uwp:CartesianChart.AxisX>
+                    <uwp:Axis Title="Day" ></uwp:Axis>
+                </uwp:CartesianChart.AxisX>
+            </uwp:CartesianChart>-->
+
+            <charting:Chart x:Name="PnLChart" Title="Profit and Loss" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Style="{StaticResource ScrollableChart}">
+                <charting:Chart.Series>
+                    <charting:LineSeries ItemsSource="{x:Bind ViewModel.ProfitLossData, Mode=OneWay}" IndependentValuePath="Date" DependentValuePath="PnL" />
+                </charting:Chart.Series>
+            </charting:Chart>
         </Grid>
     </Grid>
 </Page>

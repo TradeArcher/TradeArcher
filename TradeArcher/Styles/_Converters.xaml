@@ -1,0 +1,8 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="using:TradeArcher.Helpers">    
+    <helpers:EnumToBooleanConverter x:Key="EnumToBooleanConverter" EnumType="ElementTheme" />
+    <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <helpers:BooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" Inverse="True" />
+</ResourceDictionary>

@@ -1,16 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using TradeArcher.Core.Models;
 
 namespace TradeArcher.Core.Services
 {
-    public interface ITradesImporterService
+    public interface ITradesImporterService<TFileParser>
     {
         bool Import(FileParserType parserType, int accountId, byte[] fileData);
+        IFileParser<TFileParser> GetFileParser(FileParserType parserType);
     }
 
-    public class TradesImporterService : ITradesImporterService
+    public class TradesImporterService : ITradesImporterService<IList<Trade>>
     {
         public bool Import(FileParserType parserType, int accountId, byte[] fileData)
         {
@@ -66,7 +68,7 @@ namespace TradeArcher.Core.Services
             return importSucceeded;
         }
 
-        private IFileParser GetFileParser(FileParserType parserType)
+        public IFileParser<IList<Trade>> GetFileParser(FileParserType parserType)
         {
             switch (parserType)
             {

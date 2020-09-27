@@ -2,9 +2,9 @@
 
 namespace TradeArcher.ViewModels
 {
-    public class StrategiesPageViewModel : Screen
+    public class StrategiesViewModel : Screen
     {
-        public StrategiesPageViewModel()
+        public StrategiesViewModel()
         {
         }
     }
