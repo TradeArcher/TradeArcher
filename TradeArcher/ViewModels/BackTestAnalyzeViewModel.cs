@@ -56,6 +56,83 @@ namespace TradeArcher.ViewModels
             set => Set(ref _profitLossData, value);
         }
 
+        private double? _totalWins;
+        public double? TotalWins
+        {
+            get => _totalWins;
+            set => Set(ref _totalWins, value);
+        }
+
+        private double? _totalLosses;
+        public double? TotalLosses
+        {
+            get => _totalLosses;
+            set => Set(ref _totalLosses, value);
+        }
+
+        private int _winCount;
+        public int WinCount
+        {
+            get => _winCount;
+            set => Set(ref _winCount, value);
+        }
+
+        private int _lossCount;
+        public int LossCount
+        {
+            get => _lossCount;
+            set => Set(ref _lossCount, value);
+        }
+
+        private double? _avgWinAmt;
+        public double? AvgWinAmt
+        {
+            get => _avgWinAmt;
+            set => Set(ref _avgWinAmt, value);
+        }
+
+        private double? _avgLossAmt;
+        public double? AvgLossAmt
+        {
+            get => _avgLossAmt;
+            set => Set(ref _avgLossAmt, value);
+        }
+
+        private double? _biggestWin;
+        public double? BiggestWin
+        {
+            get => _biggestWin;
+            set => Set(ref _biggestWin, value);
+        }
+
+        private double? _biggestLoss;
+        public double? BiggestLoss
+        {
+            get => _biggestLoss;
+            set => Set(ref _biggestLoss, value);
+        }
+
+        private double? _profitFactor;
+        public double? ProfitFactor
+        {
+            get => _profitFactor;
+            set => Set(ref _profitFactor, value);
+        }
+
+        private double _winRate;
+        public double WinRate
+        {
+            get => _winRate;
+            set => Set(ref _winRate, value);
+        }
+
+        private double? _totalPnL;
+        public double? TotalPnL
+        {
+            get => _totalPnL;
+            set => Set(ref _totalPnL, value);
+        }
+
         protected override void OnInitialize()
         {
             base.OnInitialize();
@@ -127,9 +204,23 @@ namespace TradeArcher.ViewModels
                         dbData = dbData.Where(t => t.StrategyBackTestSession.StrategyBackTestSessionId == SelectedSession.StrategyBackTestSessionId).ToList();
                     }
 
+                    var gains = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl >= 0).ToList();
+                    var losses = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl < 0).ToList();
+                    TotalWins = gains.Sum(t => t.TradePnl);
+                    TotalLosses = losses.Sum(t => t.TradePnl);
+                    WinCount = gains.Count();
+                    LossCount = losses.Count();
+                    AvgWinAmt = gains.Average(t => t.TradePnl);
+                    AvgLossAmt = losses.Average(t => t.TradePnl);
+                    BiggestWin = gains.Max(t => t.TradePnl);
+                    BiggestLoss = losses.Min(t => t.TradePnl);
+                    ProfitFactor = TotalWins / TotalLosses;
+                    WinRate = (double)WinCount / ((double)WinCount + (double)LossCount);
+
                     var profitsLossesByDay = dbData
                     .Where(t => t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose)
                         .OrderBy(t => t.ExecutionTime)
+                        .ThenBy(t => t.SymbolTradeId)
                         .GroupBy(t =>
                             t.ExecutionTime.ToString("MM/dd/yy"),
                             t =>
@@ -142,6 +233,7 @@ namespace TradeArcher.ViewModels
                         //.Select(k => new { Date = k.Key})
                         .ToList();
 
+
                     for (var ix = 0; ix < profitsLossesByDay.Count; ix++)
                     {
                         var lastPnlAmt = (ix > 0) ? ProfitLossData[ix - 1].PnL : 0;
@@ -152,6 +244,8 @@ namespace TradeArcher.ViewModels
                             PnL = pnl.ProfitLossAmount + lastPnlAmt
                         });
                     }
+
+                    TotalPnL = ProfitLossData?.Last().PnL;
 
                     ChartDataChanged?.Invoke(this, ProfitLossData.Count);
                 }
