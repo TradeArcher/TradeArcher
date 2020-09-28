@@ -5,6 +5,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:charting="using:WinRTXamlToolkit.Controls.DataVisualization.Charting"
+    xmlns:toolkit="using:Microsoft.Toolkit.Uwp.UI.Controls"
+    xmlns:system="using:System"
     Style="{StaticResource PageStyle}"
     mc:Ignorable="d">
 
@@ -13,9 +15,9 @@
             <CommandBar.PrimaryCommands>
                 <AppBarElementContainer>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Strategy: " />
+                        <TextBlock HorizontalAlignment="Center" Text="Strategy: " />
                         <ComboBox ItemsSource="{x:Bind ViewModel.Strategies, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedStrategy, Mode=TwoWay}" />
-                        <TextBlock Text="Back Test Session: " />
+                        <TextBlock HorizontalAlignment="Center" Text="Back Test Session: " />
                         <ComboBox ItemsSource="{x:Bind ViewModel.SelectedStrategy.Sessions, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedSession, Mode=TwoWay}">
                             <ComboBox.Items>
                                 <ComboBoxItem>All</ComboBoxItem>
@@ -30,12 +32,63 @@
     <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
         <Grid
             Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
             <!--
                 The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
                 Place your content here.
             -->
 
-            <charting:Chart x:Name="PnLChart" Title="Profit and Loss" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Style="{StaticResource ScrollableChart}">
+            <toolkit:WrapPanel Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalSpacing="5" VerticalSpacing="5">
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="# Wins"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.WinCount, Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="# Losses"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.LossCount, Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Total Gains"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.TotalWins), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Total Losses"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.TotalLosses), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Total P/L"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.TotalPnL), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Avg Win"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.AvgWinAmt), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Avg Loss"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.AvgLossAmt), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Profit Factor"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:F}', ViewModel.ProfitFactor), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Win Rate"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:P}', ViewModel.WinRate), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Biggest Win"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.BiggestWin), Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel MinWidth="25" HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" Text="Biggest Loss"/>
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.BiggestLoss), Mode=OneWay}"/>
+                </StackPanel>
+            </toolkit:WrapPanel>
+
+            <charting:Chart x:Name="PnLChart" Grid.Row="1" Title="Profit and Loss" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Style="{StaticResource ScrollableChart}">
                 <charting:Chart.Series>
                     <charting:LineSeries ItemsSource="{x:Bind ViewModel.ProfitLossData, Mode=OneWay}" IndependentValuePath="Date" DependentValuePath="PnL"/>
                 </charting:Chart.Series>
