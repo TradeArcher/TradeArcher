@@ -7,6 +7,7 @@
     xmlns:charting="using:WinRTXamlToolkit.Controls.DataVisualization.Charting"
     xmlns:toolkit="using:Microsoft.Toolkit.Uwp.UI.Controls"
     xmlns:system="using:System"
+    xmlns:helpers="using:TradeArcher.Helpers"
     Style="{StaticResource PageStyle}"
     mc:Ignorable="d">
 
@@ -15,10 +16,10 @@
             <CommandBar.PrimaryCommands>
                 <AppBarElementContainer>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock HorizontalAlignment="Center" Text="Strategy: " />
-                        <ComboBox ItemsSource="{x:Bind ViewModel.Strategies, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedStrategy, Mode=TwoWay}" />
-                        <TextBlock HorizontalAlignment="Center" Text="Back Test Session: " />
-                        <ComboBox ItemsSource="{x:Bind ViewModel.SelectedStrategy.Sessions, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedSession, Mode=TwoWay}">
+                        <TextBlock HorizontalAlignment="Center" Text="Strategy:"  Style="{StaticResource ToolBarTextStyle}" />
+                        <ComboBox ItemsSource="{x:Bind ViewModel.Strategies, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedStrategy, Mode=TwoWay}" Style="{StaticResource ToolBarComboBoxStyle}" />
+                        <TextBlock HorizontalAlignment="Center" Text="Back Test Session:" Style="{StaticResource ToolBarTextStyle}" />
+                        <ComboBox ItemsSource="{x:Bind ViewModel.SelectedStrategy.Sessions, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{x:Bind ViewModel.SelectedSession, Mode=TwoWay}" Style="{StaticResource ToolBarComboBoxStyle}">
                             <ComboBox.Items>
                                 <ComboBoxItem>All</ComboBoxItem>
                             </ComboBox.Items>
@@ -40,50 +41,49 @@
                 The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
                 Place your content here.
             -->
-
-            <toolkit:WrapPanel Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalSpacing="5" VerticalSpacing="5">
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="# Wins"/>
-                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.WinCount, Mode=OneWay}"/>
+            <toolkit:WrapPanel Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalSpacing="0" VerticalSpacing="0">
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="# Wins" Style="{StaticResource TableHeaderTextStyle}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.WinCount, Mode=OneWay}" />
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="# Losses"/>
-                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.LossCount, Mode=OneWay}"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="# Losses" Style="{StaticResource TableHeaderTextStyle}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.LossCount, Mode=OneWay}" />
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Total Gains"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Total Gains" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.TotalWins), Mode=OneWay}"/>
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Total Losses"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Total Losses" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.TotalLosses), Mode=OneWay}"/>
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Total P/L"/>
-                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.TotalPnL), Mode=OneWay}"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Total P/L" Style="{StaticResource TableHeaderTextStyle}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.TotalPnL), Mode=OneWay}" Style="{x:Bind ViewModel.TotalPnL, Mode=OneWay, Converter={StaticResource GainLossStyleConverter}}" />
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Avg Win"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Avg Win" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.AvgWinAmt), Mode=OneWay}"/>
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Avg Loss"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Avg Loss" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.AvgLossAmt), Mode=OneWay}"/>
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Profit Factor"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Profit Factor" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:F}', ViewModel.ProfitFactor), Mode=OneWay}"/>
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Win Rate"/>
-                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:P}', ViewModel.WinRate), Mode=OneWay}"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Win Rate" Style="{StaticResource TableHeaderTextStyle}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:P}', ViewModel.WinRate), Mode=OneWay}" Style="{x:Bind ViewModel.WinRate, Mode=OneWay, Converter={StaticResource GainLossStyleConverter}, ConverterParameter=0.5}" />
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Biggest Win"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Biggest Win" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.BiggestWin), Mode=OneWay}"/>
                 </StackPanel>
-                <StackPanel MinWidth="25" HorizontalAlignment="Center">
-                    <TextBlock HorizontalAlignment="Center" Text="Biggest Loss"/>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Biggest Loss" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.BiggestLoss), Mode=OneWay}"/>
                 </StackPanel>
             </toolkit:WrapPanel>

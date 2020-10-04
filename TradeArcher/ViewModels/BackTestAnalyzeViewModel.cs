@@ -167,7 +167,10 @@ namespace TradeArcher.ViewModels
             switch (e.PropertyName)
             {
                 case nameof(SelectedSession):
+                    UpdateTrades();
+                    break;
                 case nameof(SelectedStrategy):
+                    SelectedSession = null;
                     UpdateTrades();
                     break;
             }
@@ -228,7 +231,7 @@ namespace TradeArcher.ViewModels
                                                 new
                                                 {
                                                     Date = date,
-                                                    ProfitLossAmount = trades.Sum(t => t.TickerSessionPnl ?? 0)
+                                                    ProfitLossAmount = trades.Sum(t => t.TradePnl ?? 0)
                                                 })
                         //.Select(k => new { Date = k.Key})
                         .ToList();

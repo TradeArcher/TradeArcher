@@ -1,7 +1,8 @@
 ﻿using System;
 using Windows.UI.Xaml.Data;
+using TradeArcher.Helpers;
 
-namespace TradeArcher.Helpers
+namespace TradeArcher.Converters
 {
     public class EnumToBooleanConverter : IValueConverter
     {
