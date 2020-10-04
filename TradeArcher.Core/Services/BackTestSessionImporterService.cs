@@ -33,7 +33,15 @@ namespace TradeArcher.Core.Services
 
                             if (strategyName.Contains("("))
                             {
-                                strategyName = strategyName.Substring(0, strategyName.IndexOf("(", StringComparison.InvariantCulture));
+                                if (strategyName.Contains("]"))
+                                {
+                                    var startAt = strategyName.IndexOf("(", StringComparison.InvariantCulture);
+                                    strategyName = strategyName.Substring(startAt + 1, strategyName.IndexOf("]", StringComparison.InvariantCulture) - startAt);
+                                }
+                                else
+                                {
+                                    strategyName = strategyName.Substring(0, strategyName.IndexOf("(", StringComparison.InvariantCulture));
+                                }
                             }
 
                             var dbStrategy = context.Strategies.Include(s => s.Sessions).ThenInclude(s => s.BackTestTrades).FirstOrDefault(s => s.Name == strategyName);
