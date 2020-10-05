@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TradeArcher.Core.Models;
 
 namespace TradeArcher.Core.Data.Migrations
 {
     [DbContext(typeof(TradeArcherDataContext))]
-    partial class TradeArcherDataContextModelSnapshot : ModelSnapshot
+    [Migration("20201004231719_AddBasicIndexes")]
+    partial class AddBasicIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -112,8 +114,6 @@ namespace TradeArcher.Core.Data.Migrations
                     b.HasIndex("TickerSessionPnl");
 
                     b.HasIndex("TradePnl");
-
-                    b.HasIndex("SymbolTradeId");
 
                     b.ToTable("BackTestTrades");
                 });

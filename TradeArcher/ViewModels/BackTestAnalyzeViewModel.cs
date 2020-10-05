@@ -199,12 +199,11 @@ namespace TradeArcher.ViewModels
                     var dbData = context.BackTestTrades
                         .Include(t => t.StrategyBackTestSession)
                         .ThenInclude(s => s.Strategy)
-                        .Where(t => t.StrategyBackTestSession.Strategy.StrategyId == SelectedStrategy.StrategyId)
-                        .ToList();
+                        .Where(t => t.StrategyBackTestSession.Strategy.StrategyId == SelectedStrategy.StrategyId);
 
                     if (SelectedSession != null)
                     {
-                        dbData = dbData.Where(t => t.StrategyBackTestSession.StrategyBackTestSessionId == SelectedSession.StrategyBackTestSessionId).ToList();
+                        dbData = dbData.Where(t => t.StrategyBackTestSession.StrategyBackTestSessionId == SelectedSession.StrategyBackTestSessionId);
                     }
 
                     var gains = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl >= 0).ToList();
@@ -217,13 +216,13 @@ namespace TradeArcher.ViewModels
                     AvgLossAmt = losses.Average(t => t.TradePnl);
                     BiggestWin = gains.Max(t => t.TradePnl);
                     BiggestLoss = losses.Min(t => t.TradePnl);
-                    ProfitFactor = TotalWins / TotalLosses;
+                    ProfitFactor = TotalWins / TotalLosses * -1;
                     WinRate = (double)WinCount / ((double)WinCount + (double)LossCount);
 
                     var profitsLossesByDay = dbData
                     .Where(t => t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose)
                         .OrderBy(t => t.ExecutionTime)
-                        .ThenBy(t => t.SymbolTradeId)
+                        .ThenBy(t => t.SymbolTradeId).ToList()
                         .GroupBy(t =>
                             t.ExecutionTime.ToString("MM/dd/yy"),
                             t =>
@@ -232,20 +231,15 @@ namespace TradeArcher.ViewModels
                                                 {
                                                     Date = date,
                                                     ProfitLossAmount = trades.Sum(t => t.TradePnl ?? 0)
-                                                })
-                        //.Select(k => new { Date = k.Key})
-                        .ToList();
+                                                }).ToList();
 
-
+                    double lastPnlAmt = 0;
                     for (var ix = 0; ix < profitsLossesByDay.Count; ix++)
                     {
-                        var lastPnlAmt = (ix > 0) ? ProfitLossData[ix - 1].PnL : 0;
                         var pnl = profitsLossesByDay[ix];
-                        ProfitLossData.Add(new PnLData
-                        {
-                            Date = pnl.Date,
-                            PnL = pnl.ProfitLossAmount + lastPnlAmt
-                        });
+                        var newPnlData = new PnLData {Date = pnl.Date, PnL = pnl.ProfitLossAmount + lastPnlAmt};
+                        ProfitLossData.Add(newPnlData);
+                        lastPnlAmt = newPnlData.PnL;
                     }
 
                     TotalPnL = ProfitLossData?.Last().PnL;

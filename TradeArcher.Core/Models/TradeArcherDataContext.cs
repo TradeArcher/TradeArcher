@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper.Configuration.Attributes;
 using Microsoft.EntityFrameworkCore;
 
 namespace TradeArcher.Core.Models
@@ -31,6 +32,9 @@ namespace TradeArcher.Core.Models
                 .WithOne(a => a.Broker)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Broker>()
+                .HasIndex(t => t.Name);
+
             modelBuilder.Entity<Account>()
                 .HasOne<Broker>(a => a.Broker)
                 .WithMany(b => b.Accounts);
@@ -40,14 +44,32 @@ namespace TradeArcher.Core.Models
                 .WithOne(t => t.Account)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Account>()
+                .HasIndex(t => t.Name);
+
             modelBuilder.Entity<Trade>()
                 .HasOne<Account>(t => t.Account)
                 .WithMany(a => a.Trades);
+
+            modelBuilder.Entity<Trade>()
+                .HasIndex(t => t.Price);
+
+            modelBuilder.Entity<Trade>()
+                .HasIndex(t => t.OrderSide);
+
+            modelBuilder.Entity<Trade>()
+                .HasIndex(t => t.Symbol);
+
+            modelBuilder.Entity<Trade>()
+                .HasIndex(t => t.ExecutionTime);
 
             modelBuilder.Entity<Strategy>()
                 .HasMany<StrategyBackTestSession>(s => s.Sessions)
                 .WithOne(s => s.Strategy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Strategy>()
+                .HasIndex(t => t.Name);
 
             modelBuilder.Entity<StrategyBackTestSession>()
                 .HasOne<Strategy>(s => s.Strategy)
@@ -58,9 +80,33 @@ namespace TradeArcher.Core.Models
                 .WithOne(t => t.StrategyBackTestSession)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<StrategyBackTestSession>()
+                .HasIndex(t => t.Name);
+
+            modelBuilder.Entity<StrategyBackTestSession>()
+                .HasIndex(t => t.Date);
+
             modelBuilder.Entity<BackTestTrade>()
                 .HasOne<StrategyBackTestSession>(t => t.StrategyBackTestSession)
                 .WithMany(s => s.BackTestTrades);
+
+            modelBuilder.Entity<BackTestTrade>()
+                .HasIndex(t => t.ExecutionTime);
+
+            modelBuilder.Entity<BackTestTrade>()
+                .HasIndex(t => t.OrderSide);
+
+            modelBuilder.Entity<BackTestTrade>()
+                .HasIndex(t => t.Price);
+
+            modelBuilder.Entity<BackTestTrade>()
+                .HasIndex(t => t.TradePnl);
+
+            modelBuilder.Entity<BackTestTrade>()
+                .HasIndex(t => t.TickerSessionPnl);
+
+            modelBuilder.Entity<BackTestTrade>()
+                .HasIndex(t => t.Symbol);
 
             modelBuilder.Entity<Broker>().HasData(
                 new Broker { BrokerId = 1, Name = "TD Ameritrade", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow}, 
@@ -300,6 +346,7 @@ namespace TradeArcher.Core.Models
             StrategyFullName = trade.StrategyFullName;
         }
     }
+
     public class StrategyBackTestSession : BaseEntity
     {
         public int StrategyBackTestSessionId { get; set; }
