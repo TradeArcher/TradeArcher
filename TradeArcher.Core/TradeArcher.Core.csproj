@@ -22,6 +22,5 @@
 
    <ItemGroup>
      <Folder Include="Converters\" />
-     <Folder Include="Data\Migrations\" />
    </ItemGroup>
 </Project>
