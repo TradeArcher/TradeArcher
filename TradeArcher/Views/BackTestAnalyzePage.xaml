@@ -86,6 +86,18 @@
                     <TextBlock HorizontalAlignment="Center" Text="Biggest Loss" Style="{StaticResource TableHeaderTextStyle}" />
                     <TextBlock HorizontalAlignment="Center" Text="{x:Bind system:String.Format('{0:C}', ViewModel.BiggestLoss), Mode=OneWay}"/>
                 </StackPanel>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Avg HoldTime" Style="{StaticResource TableHeaderTextStyle}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.AvgHoldTime, Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Avg Winning HoldTime" Style="{StaticResource TableHeaderTextStyle}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.AvgWinningHoldTime, Mode=OneWay}"/>
+                </StackPanel>
+                <StackPanel Style="{StaticResource WrapPanelStatsItemStyle}">
+                    <TextBlock HorizontalAlignment="Center" Text="Avg Losing HoldTime" Style="{StaticResource TableHeaderTextStyle}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{x:Bind ViewModel.AvgLosingHoldTime, Mode=OneWay}"/>
+                </StackPanel>
             </toolkit:WrapPanel>
 
             <charting:Chart x:Name="PnLChart" Grid.Row="1" Title="Profit and Loss" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Style="{StaticResource ScrollableChart}">

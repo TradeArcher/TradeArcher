@@ -56,6 +56,27 @@ namespace TradeArcher.ViewModels
             set => Set(ref _profitLossData, value);
         }
 
+        private string _avgHoldTime;
+        public string AvgHoldTime
+        {
+            get => _avgHoldTime;
+            set => Set(ref _avgHoldTime, value);
+        }
+
+        private string _avgWinningHoldTime;
+        public string AvgWinningHoldTime
+        {
+            get => _avgWinningHoldTime;
+            set => Set(ref _avgWinningHoldTime, value);
+        }
+
+        private string _avgLosingHoldTime;
+        public string AvgLosingHoldTime
+        {
+            get => _avgLosingHoldTime;
+            set => Set(ref _avgLosingHoldTime, value);
+        }
+
         private double? _totalWins;
         public double? TotalWins
         {
@@ -181,7 +202,7 @@ namespace TradeArcher.ViewModels
         {
             using (var context = new TradeArcherDataContext())
             {
-                Strategies = new ObservableCollection<Strategy>(context.Strategies.Include(s => s.Sessions).ThenInclude(s => s.BackTestTrades));
+                Strategies = new ObservableCollection<Strategy>(context.Strategies.Include(s => s.Sessions).ThenInclude(s => s.BackTestTrades).OrderBy(s => s.Name));
             }
 
             SelectedStrategy = Strategies.FirstOrDefault();
@@ -206,8 +227,31 @@ namespace TradeArcher.ViewModels
                         dbData = dbData.Where(t => t.StrategyBackTestSession.StrategyBackTestSessionId == SelectedSession.StrategyBackTestSessionId);
                     }
 
-                    var gains = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl >= 0).ToList();
-                    var losses = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl < 0).ToList();
+                    var allTrades = dbData.OrderBy(t => t.Symbol).ThenBy(t => t.SymbolTradeId);
+
+                    var tradeTimes = new List<BackTestTradeTime>();
+
+                    foreach (var backTestOpenTrade in allTrades.Where(t => t.OrderSide == OrderSide.BuyToOpen || t.OrderSide == OrderSide.SellToOpen))
+                    {
+                        var backTestCloseTrade = allTrades.FirstOrDefault(t => t.Symbol == backTestOpenTrade.Symbol && t.SymbolTradeId > backTestOpenTrade.SymbolTradeId && (t.OrderSide == OrderSide.BuyToClose || t.OrderSide == OrderSide.SellToClose));
+
+                        if (backTestCloseTrade != null)
+                        {
+                            tradeTimes.Add(new BackTestTradeTime
+                            {
+                                Symbol = backTestOpenTrade.Symbol,
+                                HoldTime = backTestCloseTrade.ExecutionTime - backTestOpenTrade.ExecutionTime,
+                                IsWinner = backTestCloseTrade.TickerSessionPnl > 0
+                            });
+                        }
+                    }
+
+                    AvgHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Average(t => t.HoldTime.TotalMilliseconds)).ToString("d'd 'h'h 'm'm 's's'");
+                    AvgWinningHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Where(t => t.IsWinner).Average(t => t.HoldTime.TotalMilliseconds)).ToString("d'd 'h'h 'm'm 's's'");
+                    AvgLosingHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Where(t => !t.IsWinner).Average(t => t.HoldTime.TotalMilliseconds)).ToString("d'd 'h'h 'm'm 's's'");
+
+                    var gains = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl > 0).ToList();
+                    var losses = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl <= 0).ToList();
                     TotalWins = gains.Sum(t => t.TradePnl);
                     TotalLosses = losses.Sum(t => t.TradePnl);
                     WinCount = gains.Count();
@@ -254,5 +298,12 @@ namespace TradeArcher.ViewModels
     {
         public string Date { get; set; }
         public double PnL { get; set; }
+    }
+
+    public class BackTestTradeTime
+    {
+        public string Symbol { get; set; }
+        public bool IsWinner { get; set; }
+        public TimeSpan HoldTime { get; set; }
     }
 }
