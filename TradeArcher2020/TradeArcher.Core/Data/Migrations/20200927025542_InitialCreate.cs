@@ -30,7 +30,7 @@ namespace TradeArcher.Core.Data.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     CreatedDate = table.Column<DateTime>(nullable: true),
                     ModifiedDate = table.Column<DateTime>(nullable: true),
-                    Name = table.Column<string>(maxLength: 255, nullable: false)
+                    Name = table.Column<string>(maxLength: 1000, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -68,8 +68,8 @@ namespace TradeArcher.Core.Data.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     CreatedDate = table.Column<DateTime>(nullable: true),
                     ModifiedDate = table.Column<DateTime>(nullable: true),
-                    Name = table.Column<string>(maxLength: 255, nullable: false),
-                    Description = table.Column<string>(maxLength: 255, nullable: true),
+                    Name = table.Column<string>(maxLength: 1000, nullable: false),
+                    Description = table.Column<string>(maxLength: 3000, nullable: true),
                     Date = table.Column<DateTime>(nullable: false),
                     StrategyId = table.Column<int>(nullable: false)
                 },

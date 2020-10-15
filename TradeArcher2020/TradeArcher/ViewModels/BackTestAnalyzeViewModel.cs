@@ -241,17 +241,17 @@ namespace TradeArcher.ViewModels
                             {
                                 Symbol = backTestOpenTrade.Symbol,
                                 HoldTime = backTestCloseTrade.ExecutionTime - backTestOpenTrade.ExecutionTime,
-                                IsWinner = backTestCloseTrade.TickerSessionPnl > 0
+                                IsWinner = backTestCloseTrade.TradePnl > 0
                             });
                         }
                     }
 
                     AvgHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Average(t => t.HoldTime.TotalMilliseconds)).ToString("d'd 'h'h 'm'm 's's'");
-                    AvgWinningHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Where(t => t.IsWinner).Average(t => t.HoldTime.TotalMilliseconds)).ToString("d'd 'h'h 'm'm 's's'");
-                    AvgLosingHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Where(t => !t.IsWinner).Average(t => t.HoldTime.TotalMilliseconds)).ToString("d'd 'h'h 'm'm 's's'");
+                    AvgWinningHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Any(t => t.IsWinner) ? tradeTimes.Where(t => t.IsWinner).Average(t => t.HoldTime.TotalMilliseconds) : 0).ToString("d'd 'h'h 'm'm 's's'");
+                    AvgLosingHoldTime = TimeSpan.FromMilliseconds(tradeTimes.Any(t => !t.IsWinner) ? tradeTimes.Where(t => !t.IsWinner).Average(t => t.HoldTime.TotalMilliseconds) : 0).ToString("d'd 'h'h 'm'm 's's'");
 
-                    var gains = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl > 0).ToList();
-                    var losses = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TickerSessionPnl <= 0).ToList();
+                    var gains = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TradePnl > 0).ToList();
+                    var losses = dbData.Where(t => (t.OrderSide == OrderSide.SellToClose || t.OrderSide == OrderSide.BuyToClose) && t.TradePnl <= 0).ToList();
                     TotalWins = gains.Sum(t => t.TradePnl);
                     TotalLosses = losses.Sum(t => t.TradePnl);
                     WinCount = gains.Count();

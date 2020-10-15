@@ -102,7 +102,7 @@
 
             <charting:Chart x:Name="PnLChart" Grid.Row="1" Title="Profit and Loss" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Style="{StaticResource ScrollableChart}">
                 <charting:Chart.Series>
-                    <charting:LineSeries ItemsSource="{x:Bind ViewModel.ProfitLossData, Mode=OneWay}" IndependentValuePath="Date" DependentValuePath="PnL"/>
+                    <charting:LineSeries Title="" ItemsSource="{x:Bind ViewModel.ProfitLossData, Mode=OneWay}" IndependentValuePath="Date" DependentValuePath="PnL"/>
                 </charting:Chart.Series>
             </charting:Chart>
 
