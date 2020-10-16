@@ -1,0 +1,6 @@
+#Average Volume Indicator
+#Author: TradeArcher2020
+#Version: 0.2
+#Date Created: 10/16/2020
+
+plot value = Round(VolumeAvg(10)[1], 0);
