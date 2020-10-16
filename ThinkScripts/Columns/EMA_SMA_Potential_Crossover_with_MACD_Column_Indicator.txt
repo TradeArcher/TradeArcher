@@ -1,0 +1,40 @@
+#EMA SMA Crossover with MACD Strategy Column Indicator
+#Author: TradeArcher2020
+#Version: 0.2
+#Date Created: 10/16/2020
+
+input emaLength = 8;
+input smaLength = 26;
+input ensureUptrend = no;
+
+input uptrendPeriod = 2;
+input includePreMarket = yes;
+
+input MACDMinValue = 0.0;
+input MACDEnsureMAsBelowZero = yes;
+
+input buyOption = open;
+
+def shortMA = movAvgExponential( length = emaLength );
+def longMA = simpleMovingAvg ( length = smaLength  );
+def macdShortMA = MACD();
+def macdLongMA = MACD().Avg;
+def macdDiff = MACD().Diff;
+
+def isWithinTradingHours = if (includePreMarket, yes, regularTradingStart(GetYYYYMMDD()) < gettime() and  regularTradingEnd(GetYYYYMMDD()) > gettime());
+
+def isTrendingUp = if(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and longMA > longMA[uptrendPeriod - 1]);
+
+def areMACDMAsBelowZero = MACDEnsureMAsBelowZero and (macdLongMA <= 0.0 and macdShortMA <= 0.0);
+
+def showLabel = shortMA < longMA and (shortMA[1] - longMA[1]) < (shortMA - longMA) and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
+
+def isBelowVWAP = shortMA < vwap(period = AggregationPeriod.DAY);
+
+AddLabel(visible = showLabel and isBelowVWAP, color = Color.ORANGE, text = "Yes");
+
+AddLabel(visible = showLabel and !isBelowVWAP, color = Color.GREEN, text = "Yes");
+
+AddLabel(visible = !showLabel, text = " ");
+
+
