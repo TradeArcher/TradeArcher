@@ -1,0 +1,8 @@
+#Spread Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.2
+#Date Created: 10/16/2020
+
+def spread = ASK - BID;
+plot spreadValue = spread;
+AddLabel(yes, AsText(spread, NumberFormat.THREE_DECIMAL_PLACES   ));

@@ -1,0 +1,12 @@
+#Spread Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.2
+#Date Created: 10/16/2020
+
+input minSpread = 0.25; #25 cent minimum spread by default
+input maxSpread = 0.50; #50 cent maximum spread by default
+
+declare hide_on_daily;
+def spread = close(priceType = PriceType.ASK) - close(priceType = PriceType.BID);
+
+AddLabel(1, "Spread: " + spread, if spread >= minSpread and spread <= maxSpread  then Color.YELLOW else if spread > maxSpread then Color.GREEN else Color.CURRENT);

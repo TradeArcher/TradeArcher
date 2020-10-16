@@ -1,0 +1,13 @@
+#Average Candle Range Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.2
+#Date Created: 10/16/2020
+
+input numberOfPeriods = 10;
+
+def periodHigh = high;
+def periodLow = low;
+
+def sumOfAllSpreads = fold ix = 0 to numberOfPeriods with totalOfAllSpreads = 0 do totalOfAllSpreads + getValue(periodHigh, ix, numberOfPeriods) - getValue(periodLow, ix, numberOfPeriods);
+
+plot averageGap = sumOfAllSpreads / numberOfPeriods;
