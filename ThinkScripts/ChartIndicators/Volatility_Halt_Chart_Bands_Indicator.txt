@@ -1,0 +1,110 @@
+#Volatility Halt Level Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.2
+#Date Created: 10/16/2020
+
+#Limitation: You must specify if the stock is a Tier 1 stock. That is a stock that is part of the S&P 500 or the Russel 1000.
+#NOTE: Tier 1 stocks are rarely halted for volatility. 
+
+declare hide_on_daily;
+declare once_per_bar;
+
+input ShowHaltResumedBubbles = yes;
+input IsTierOneStock = no; #Tier 1 stocks are in the S&PaintingStrategy.ARROW_DOWN 500 or Russell 1000
+
+def isInHighVolumeTime = if (SecondsTillTime(0930) <= 0 and SecondsTillTime(0945) > 0) or (SecondsTillTime(1535) <= 0 and SecondsTillTime(1600) > 0) then yes else no;
+
+def currentPrice = close(priceType = PriceType.LAST, period = AggregationPeriod.MIN);
+
+def active = SecondsFromTime(0930) >= 0 and SecondsTillTime(1600) - 1 >= 0;
+def today  = GetDay() == GetLastDay();
+def isMinuteAgg = (GetAggregationPeriod() == AggregationPeriod.MIN);
+def minFromStart = RoundDown(SecondsFromTime(0930) / 60, 0);
+def qualifies = active and today and isMinuteAgg;
+
+def minutesHalted = if qualifies
+    and minFromStart > minFromStart[1] + 1    #if next bar > 1min from current bar
+    then minFromStart - minFromStart[1]       #difference in minutes
+    else 0;
+
+def likelyHalt = minutesHalted >= 5;
+
+def showResumeBubble = ShowHaltResumedBubbles and qualifies and minFromStart > minFromStart[1] + 1;
+AddChartBubble(showResumeBubble, high, minutesHalted + " Min Halt\nResumed", Color.orange, yes);
+
+def useCurrentBar = 
+if qualifies and minFromStart > minFromStart[1] + 1
+then 0
+else
+    if qualifies and minFromStart[1] > minFromStart[2] + 1
+    then 1
+    else
+        if qualifies and minFromStart[2] > minFromStart[3] + 1
+        then 2
+        else
+            if qualifies and minFromStart[3] > minFromStart[4] + 1
+            then 3
+            else
+                if qualifies and minFromStart[4] > minFromStart[5] + 1
+                then 4
+                else 5;
+
+def fiveMinPastPrice = 
+if useCurrentBar == 0
+then currentPrice[1]
+else
+    if useCurrentBar == 1
+    then currentPrice[2]
+    else
+        if useCurrentBar == 2
+        then currentPrice[3]
+        else
+            if useCurrentBar == 3
+            then currentPrice[4]
+            else
+                if useCurrentBar == 4
+                then currentPrice[5]
+                else currentPrice[5];
+
+def tier = 
+if IsTierOneStock and currentPrice > 3.00
+then 1
+else 
+    if !IsTierOneStock and currentPrice > 3.00
+    then 2
+    else 
+        if !IsTierOneStock and currentPrice <= 3.00 and currentPrice >= 0.75
+        then 3
+        else 4;
+
+def deltaFactor = 
+if isInHighVolumeTime
+then 
+    if tier == 1 
+    then .10
+    else if tier == 2
+    then .20
+    else if tier == 3
+    then .40
+    else 1.50
+else 
+    if tier == 1 
+    then .05
+    else if tier == 2
+    then .10
+    else if tier == 3
+    then .20
+    else .75;
+
+#AddChartBubble("time condition" =  yes, "price location" = high, text = fiveMinPastPrice + "\n" + deltaFactor + "\n" + useCurrentBar, color = Color.LIGHT_GREEN);
+
+def upperPlotLevel = fiveMinPastPrice + (fiveMinPastPrice * deltaFactor);
+def lowerPlotLevel = fiveMinPastPrice - (fiveMinPastPrice * deltaFactor);
+def tier3PriceLevel = if (isInHighVolumeTime, 0.30, 0.15);
+plot upperLimit = if (tier < 3, upperPlotLevel, if (AbsValue(upperPlotLevel - fiveMinPastPrice) < tier3PriceLevel, upperPlotLevel, tier3PriceLevel));
+upperLimit.SetDefaultColor(color = Color.LIGHT_GRAY);
+upperLimit.SetStyle(Curve.SHORT_DASH);
+#plot lowerLimit = fiveMinPastPrice - (fiveMinPastPrice * deltaFactor);
+plot lowerLimit = if (tier < 3, lowerPlotLevel, if (AbsValue(lowerPlotLevel - fiveMinPastPrice) < tier3PriceLevel, lowerPlotLevel, tier3PriceLevel * -1));
+lowerLimit.SetDefaultColor(color = Color.LIGHT_GRAY);
+lowerLimit.SetStyle(Curve.SHORT_DASH);

@@ -27,6 +27,6 @@ def isTrendingUp = if(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and 
 
 def areMACDMAsBelowZero = MACDEnsureMAsBelowZero and (macdLongMA <= 0.0 and macdShortMA <= 0.0);
 
-plot showLabel = shortMA < longMA and (shortMA[1] - longMA[1]) < (shortMA - longMA) and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
+plot showLabel = shortMA[1] < longMA[1] and (shortMA[2] - longMA[2]) <= (shortMA[1] - longMA[1]) and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
 
 
