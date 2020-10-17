@@ -106,5 +106,5 @@ plot lowerLimit = if (tier < 3, lowerPlotLevel, if (AbsValue(lowerPlotLevel - fi
 lowerLimit.SetDefaultColor(color = Color.LIGHT_GRAY);
 lowerLimit.SetStyle(Curve.SHORT_DASH);
 
-def showResumeBubble = ShowHaltResumedBubbles and qualifies and minFromStart > minFromStart[1] + 1 and (fiveMinPastPrice > upperPlotLevel or fiveMinPastPrice < lowerPlotLevel);
+def showResumeBubble = ShowHaltResumedBubbles and qualifies and minFromStart > minFromStart[1] + 1 and (currentPrice[1] > upperPlotLevel[1] or currentPrice[1] < lowerPlotLevel[1]);
 AddChartBubble(showResumeBubble, high, minutesHalted + " Min Halt\nResumed", Color.orange, yes);
