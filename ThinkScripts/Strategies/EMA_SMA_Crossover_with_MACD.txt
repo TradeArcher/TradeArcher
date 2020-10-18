@@ -1,6 +1,6 @@
 #EMA SMA Crossover with MACD Strategy
 #Author: TradeArcher2020
-#Version: 0.3
+#Version: 0.4
 #Date Created: 10/14/2020
 
 input emaLength = 8;
@@ -15,6 +15,7 @@ input conservativeSell = yes;
 input avgVolPeriod = 5;
 input uptrendPeriod = 5;
 input includePreMarket = no;
+input candleAggregationPeriod = AggregationPeriod.MIN;
 
 input MACDMinValue = 0.0;
 input MACDEnsureMAsBelowZero = yes;
@@ -25,22 +26,22 @@ input buyOption = open;
 input sellPrice = open;
 input minAverageVolumeForFullSize = 75000;
 
-def shortMA = movAvgExponential( length = emaLength );
-def shorterEMA = movAvgExponential( length = shorterEMALength );
-def longMA = simpleMovingAvg ( length = smaLength  );
+def shortMA = MovAvgExponential( length = emaLength );
+def shorterEMA = MovAvgExponential( length = shorterEMALength );
+def longMA = SimpleMovingAvg ( length = smaLength  );
 def macdShortMA = MACD();
 def macdLongMA = MACD().Avg;
 def macdDiff = MACD().Diff;
 
 def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
 
-def isWithinTradingHours = if (includePreMarket, yes, regularTradingStart(GetYYYYMMDD()) < gettime() and  regularTradingEnd(GetYYYYMMDD()) > gettime());
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
 
-def baseNumberOfShares = if (hasMinVolume, min(round( (accountSize * accountPercent / 100) / buyOption[-1], numberOfDigits = 0 ), maxShares), min(round( (accountSize * (accountPercent / 4) / 100) / buyOption[-1], numberOfDigits = 0 ), maxShares / 2));
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / buyOption[-1], numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / buyOption[-1], numberOfDigits = 0 ), maxShares / 2));
 
-def numberOfShares = if(!isWithinTradingHours, AbsValue(baseNumberOfShares / 4), baseNumberOfShares);
+def numberOfShares = If(!isWithinTradingHours, AbsValue(baseNumberOfShares / 4), baseNumberOfShares);
 
-def isTrendingUp = if(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and longMA > longMA[uptrendPeriod - 1]);
+def isTrendingUp = If(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and longMA > longMA[uptrendPeriod - 1]);
 
 def areMACDMAsBelowZero = MACDEnsureMAsBelowZero and (macdLongMA <= 0.0 and macdShortMA <= 0.0);
 
@@ -48,19 +49,31 @@ def buy = shortMA[1] < longMA[1] and shortMA[0] >= longMA[0] and isWithinTrading
 
 #AddChartBubble("time condition" = yes, "price location" = HIGH, text = "S:" + macdShortMA + "\nL:" + macdLongMA + "\nD:" + macdDiff + "\nBZ:" + areMACDMAsBelowZero + "\nDGM:" + (macdDiff > MACDMinValue) + "\n1:" + ( shortMA[0] < longMA[0]) + "\n2:" + (shortMA[-1] >= longMA[-1]) + "\n3:" + isWithinTradingHours + "\n4:" + isTrendingUp + "\nBUY:" + buy);
 
-addOrder( OrderType.BUY_TO_OPEN, buy, tradeSize = numberOfShares, price = buyOption, tickColor = Color.LIME, arrowColor = Color.LIME, name = "EMA_SMA_Crossover_with_MACD BUY[" + emaLength + ", " + shorterEMALength + ", " + smaLength + ", " + ensureUptrend + ", " + avgVolPeriod + ", " + uptrendPeriod + ", " + includePreMarket + ", " + MACDMinValue + ", " + MACDEnsureMAsBelowZero + ", " + PercentAcceptableLoss + "] BUY @" + buyOption );
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
 
-def buyPrice = entryPrice();
+addOrder( OrderType.BUY_TO_OPEN, buy, tradeSize = numberOfShares, price = buyOption, tickColor = Color.LIME, arrowColor = Color.LIME, name = "EMA_SMA_Crossover_with_MACD BUY[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + emaLength + ", " + shorterEMALength + ", " + smaLength + ", " + ensureUptrend + ", " + avgVolPeriod + ", " + uptrendPeriod + ", " + includePreMarket + ", " + MACDMinValue + ", " + MACDEnsureMAsBelowZero + ", " + PercentAcceptableLoss + "] BUY @" + buyOption );
+
+def buyPrice = EntryPrice();
 
 def isGain = sellPrice > buyPrice;
 
 def percentGainLoss = ((close - buyPrice) / buyPrice) * 100;
 
 def cutLoss =  (buyPrice > close and percentGainLoss < (PercentAcceptableLoss * -1));
-def sell = if(conservativeSell, macdDiff < 0 or cutLoss, shortMA[-1] <= longMA[-1] or cutLoss);
+def sell = If(conservativeSell, macdDiff < 0 or cutLoss, shortMA[-1] <= longMA[-1] or cutLoss);
 
 #AddChartBubble("time condition" = yes, "price location" = HIGH, text = "1:" + (buyPrice > close) + "\n2:" + percentGainLoss + "\n3:" + (PercentAcceptableLoss * -1));
 
-addOrder( OrderType.SELL_TO_CLOSE, sell and isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "EMA_SMA_Crossover_with_MACD BUY[" + emaLength + ", " + shorterEMALength + ", " + smaLength + ", " + ensureUptrend + ", " + avgVolPeriod + ", " + uptrendPeriod + ", " + includePreMarket + ", " + MACDMinValue + ", " + MACDEnsureMAsBelowZero + ", " + PercentAcceptableLoss + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
+AddOrder( OrderType.SELL_TO_CLOSE, sell and isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "EMA_SMA_Crossover_with_MACD BUY[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " +  + emaLength + ", " + shorterEMALength + ", " + smaLength + ", " + ensureUptrend + ", " + avgVolPeriod + ", " + uptrendPeriod + ", " + includePreMarket + ", " + MACDMinValue + ", " + MACDEnsureMAsBelowZero + ", " + PercentAcceptableLoss + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
 
-addOrder( OrderType.SELL_TO_CLOSE, sell and !isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "EMA_SMA_Crossover_with_MACD BUY[" + emaLength + ", " + shorterEMALength + ", " + smaLength + ", " + ensureUptrend + ", " + avgVolPeriod + ", " + uptrendPeriod + ", " + includePreMarket + ", " + MACDMinValue + ", " + MACDEnsureMAsBelowZero + ", " + PercentAcceptableLoss + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
+AddOrder( OrderType.SELL_TO_CLOSE, sell and !isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "EMA_SMA_Crossover_with_MACD BUY[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " +  + emaLength + ", " + shorterEMALength + ", " + smaLength + ", " + ensureUptrend + ", " + avgVolPeriod + ", " + uptrendPeriod + ", " + includePreMarket + ", " + MACDMinValue + ", " + MACDEnsureMAsBelowZero + ", " + PercentAcceptableLoss + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
