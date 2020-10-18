@@ -1,6 +1,6 @@
 #EMA SMA Crossover with MACD Strategy
 #Author: TradeArcher2020
-#Version: 0.2
+#Version: 0.3
 #Date Created: 10/14/2020
 
 input emaLength = 8;
@@ -10,7 +10,7 @@ input accountSize = 5000;
 input accountPercent = 10;
 input maxShares = 1000;
 input ensureUptrend = no;
-input conservativeSell = no;
+input conservativeSell = yes;
 
 input avgVolPeriod = 5;
 input uptrendPeriod = 5;
@@ -22,7 +22,7 @@ input MACDEnsureMAsBelowZero = yes;
 input PercentAcceptableLoss = 0.1;
 
 input buyOption = open;
-input sellPrice = high;
+input sellPrice = open;
 input minAverageVolumeForFullSize = 75000;
 
 def shortMA = movAvgExponential( length = emaLength );
@@ -44,7 +44,7 @@ def isTrendingUp = if(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and 
 
 def areMACDMAsBelowZero = MACDEnsureMAsBelowZero and (macdLongMA <= 0.0 and macdShortMA <= 0.0);
 
-def buy = shortMA[-2] >= longMA[-2] and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
+def buy = shortMA[1] < longMA[1] and shortMA[0] >= longMA[0] and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
 
 #AddChartBubble("time condition" = yes, "price location" = HIGH, text = "S:" + macdShortMA + "\nL:" + macdLongMA + "\nD:" + macdDiff + "\nBZ:" + areMACDMAsBelowZero + "\nDGM:" + (macdDiff > MACDMinValue) + "\n1:" + ( shortMA[0] < longMA[0]) + "\n2:" + (shortMA[-1] >= longMA[-1]) + "\n3:" + isWithinTradingHours + "\n4:" + isTrendingUp + "\nBUY:" + buy);
 
