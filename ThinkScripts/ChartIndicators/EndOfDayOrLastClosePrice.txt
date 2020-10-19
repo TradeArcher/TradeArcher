@@ -1,0 +1,21 @@
+#End of Day or Last Close Price Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/18/2020
+
+input minGapUpPercent = 10;
+def beforeStart = GetTime() < RegularTradingStart(GetYYYYMMDD());
+def afterEnd = GetTime() > RegularTradingEnd(GetYYYYMMDD());
+def lastSessionEndTime = RegularTradingEnd(GetYYYYMMDD());
+def minutesSinceClose = SecondsFromTime(0400) / 60;
+
+def isAfterHours = !beforeStart and afterEnd;
+def isPreMarket = beforeStart and !afterEnd;
+def isMarketHours = !beforeStart and !afterEnd;
+
+plot endOfDayClosePrice = if isMarketHours then close(period = AggregationPeriod.DAY, priceType = PriceType.LAST) else if isAfterHours then close(period = AggregationPeriod.DAY, priceType = PriceType.LAST)[0] else close(period = AggregationPeriod.DAY, priceType = PriceType.LAST)[1];
+
+endOfDayClosePrice.AssignValueColor(if isMarketHours then Color.Red else Color.Blue);
+
+def gapUpPercent = ((close - endOfDayClosePrice) / endOfDayClosePrice) * 100;
+def isGappingUp = gapUpPercent >= minGapUpPercent;

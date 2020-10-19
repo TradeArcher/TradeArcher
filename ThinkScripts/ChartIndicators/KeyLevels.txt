@@ -1,0 +1,76 @@
+#Key Levels Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/18/2020
+
+#Begin Previous Day's Close
+plot previousDaysClose = close(period=”DAY”)[1];
+previousDaysClose.SetDefaultColor(color = Color.LIGHT_GRAY);
+previousDaysClose.SetStyle(Curve.SHORT_DASH);
+#End Previous Day's Close
+
+#Begin Today's Open
+def todaysOpen = open(period = AggregationPeriod.DAY);
+plot dailyOpen = todaysOpen;
+dailyOpen.SetDefaultColor(color = Color.LIGHT_GRAY);
+dailyOpen.SetStyle(Curve.SHORT_DASH);
+#End Today's Open
+
+#Begin Today's Close
+def beforeStart = GetTime() < RegularTradingStart(GetYYYYMMDD());
+def afterEnd = GetTime() > RegularTradingEnd(GetYYYYMMDD());
+#def lastSessionEndTime = RegularTradingEnd(GetYYYYMMDD());
+#def minutesSinceClose = SecondsFromTime(0400) / 60;
+
+def isAfterHours = !beforeStart and afterEnd;
+#def isPreMarket = beforeStart and !afterEnd;
+def isMarketHours = !beforeStart and !afterEnd;
+
+plot todaysClose = if isMarketHours then close(period = AggregationPeriod.DAY, priceType = PriceType.LAST) else if isAfterHours then close(period = AggregationPeriod.DAY, priceType = PriceType.LAST)[0] else close(period = AggregationPeriod.DAY, priceType = PriceType.LAST)[1];
+
+todaysClose.SetDefaultColor(color = Color.LIGHT_GRAY);
+todaysClose.SetStyle(Curve.SHORT_DASH);
+#End Today's Close
+
+#Begin Pre-Market High
+def h = high;
+def bar = BarNumber();
+def isOutsideTradingHours = GetTime() < RegularTradingStart(GetYYYYMMDD());
+def overNightHigh = if isOutsideTradingHours and !isOutsideTradingHours[1] then h else if isOutsideTradingHours and h > overNightHigh[1] then h else overNightHigh[1];
+def overNightHighBar = if isOutsideTradingHours and h == overNightHigh then bar else Double.NaN;
+def overNightHighest = if BarNumber() == HighestAll(overNightHighBar) then overNightHigh else overNightHighest[1];
+
+plot overNightHighestLine = overNightHighest;
+overNightHighestLine.SetDefaultColor(color = Color.LIGHT_GRAY);
+overNightHighestLine.SetStyle(Curve.SHORT_DASH);
+#End Pre-MarketForecast High
+
+#Begin Pre-Market Low
+def l = low;
+def overNightLow = if isOutsideTradingHours and !isOutsideTradingHours[1] then l else if isOutsideTradingHours and l < overNightLow[1] then l else overNightLow[1];
+def overNightLowBar = if isOutsideTradingHours and l == overNightLow then bar else Double.NaN;
+def overNightLowest = if BarNumber() == HighestAll(overNightLowBar) then overNightLow else overNightLowest[1];
+
+plot overNightLowestLine = overNightLowest;
+overNightLowestLine.SetDefaultColor(color = Color.LIGHT_GRAY);
+overNightLowestLine.SetStyle(Curve.SHORT_DASH);
+#End Pre-MarketForecast Low
+
+#Begin After-Market High
+#End After-Market High
+
+#Begin High Of Day
+plot highOfDay = high(period = AggregationPeriod.DAY);
+highOfDay.SetDefaultColor(color = Color.LIGHT_GRAY);
+highOfDay.SetStyle(Curve.SHORT_DASH);
+#End High of Day
+
+#Begin Low Of Day
+plot lowOfDay = low(period = AggregationPeriod.DAY);
+lowOfDay.SetDefaultColor(color = Color.LIGHT_GRAY);
+lowOfDay.SetStyle(Curve.SHORT_DASH);
+#End High of Day
+
+
+
+

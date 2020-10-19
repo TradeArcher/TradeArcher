@@ -1,0 +1,14 @@
+#Today's Open Price Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/18/2020
+
+input aggregationPeriod = AggregationPeriod.DAY;
+input showOnlyLastPeriod = yes;
+
+def prevPrice = open(period = aggregationPeriod)[-1];
+def price = open(period = aggregationPeriod);
+plot DailyOpen = if showOnlyLastPeriod and !IsNaN(prevPrice) then Double.NaN else price;
+
+DailyOpen.SetDefaultColor(GetColor(2));
+DailyOpen.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);

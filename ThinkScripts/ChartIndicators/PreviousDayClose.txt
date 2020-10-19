@@ -1,0 +1,6 @@
+#Previous Day Close Price Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/18/2020
+
+plot DailyClose = close(period=”DAY”)[1];
