@@ -1,6 +1,6 @@
 #EMA SMA Crossover with MACD Strategy
 #Author: TradeArcher2020
-#Version: 0.4
+#Version: 0.3
 #Date Created: 10/14/2020
 
 input emaLength = 8;
@@ -67,7 +67,7 @@ def buyPrice = EntryPrice();
 
 def isGain = sellPrice > buyPrice;
 
-def percentGainLoss = ((close - buyPrice) / buyPrice) * 100;
+def percentGainLoss = ((sellPrice - buyPrice) / sellPrice) * 100;
 
 def cutLoss =  (buyPrice > close and percentGainLoss < (PercentAcceptableLoss * -1));
 def sell = If(conservativeSell, macdDiff < 0 or cutLoss, shortMA[-1] <= longMA[-1] or cutLoss);
