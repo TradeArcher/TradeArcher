@@ -1,6 +1,6 @@
 #EMA SMA Crossover with MACD Strategy Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.2
+#Version: 0.4
 #Date Created: 10/16/2020
 
 input emaLength = 8;
