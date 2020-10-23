@@ -1,9 +1,9 @@
 # ThinkScript Basics
 
 ### Contents
-* [How to Add a Custom Study Script](#how-to-add-a-custom-study-script)
+* [How to Add a Custom Study Script on a Chart](#how-to-add-a-custom-study-script-on-a-chart)
 
-### How to Add a Custom Study Script
+### How to Add a Custom Study Script on a Chart
 
 1. Right-Click anywhere on your chart
 
