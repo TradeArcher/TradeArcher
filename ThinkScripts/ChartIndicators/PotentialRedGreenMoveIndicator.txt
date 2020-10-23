@@ -1,0 +1,25 @@
+#Potential Red to Green Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/23/2020
+
+input rangeDenominator = 2; #Used to divide the range of the previous bar to determine if price is within the alert range
+
+def periodHigh = high;
+def periodLow = low;
+
+def range = periodHigh[1] - periodLow[1];
+
+def redGreenLevel = DailyOpen();
+
+def price = close(priceType = PriceType.LAST);
+
+def rgDiff = redGreenLevel - price;
+
+def isPotentialRedGreenMove = price < redGreenLevel and rgDiff > 0 and rgDiff <= (range / if (rangeDenominator == 0, 1, rangeDenominator));
+
+plot isPotentialRedGreenMovePlot = isPotentialRedGreenMove;
+isPotentialRedGreenMovePlot.SetHiding(yes);
+
+#AddLabel(yes, text = "price:" + price + " redGreenLevel: " + redGreenLevel + " rgDiff:" + rgDiff + " range:" + range + " sub range:" + (range / if (rangeDenominator == 0, 1, rangeDenominator)));
+AddLabel(isPotentialRedGreenMove, text = "Potential Red/Green Move", color = Color.LIGHT_GREEN);
