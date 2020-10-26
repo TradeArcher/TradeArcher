@@ -1,0 +1,88 @@
+#TTM Squeeze with MACD and Long Simple Moving Average Strategy
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/25/2020
+
+input accountSize = 5000;
+input accountPercent = 10;
+input maxShares = 1000;
+input minAverageVolumeForFullSize = 75000;
+input avgVolPeriod = 5;
+
+input percentAcceptableLoss = 0.5;
+
+input includePremarket = no;
+
+input ensureAboveLongMA = no;
+input longMAPeriod = 200;
+input acceptableLongMAAngle = 0.0001;
+input numberOfPeriodsBackForLongMAAngle = 120;
+
+#Price to buy in at
+def buyPrice = low;
+def sellPrice = high;
+
+#***********************************************************************
+#Calculate boilerplate minimum volume, premarket and share size variables
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / buyPrice, numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / buyPrice, numberOfDigits = 0 ), maxShares / 2));
+
+def numberOfShares = If(!isWithinTradingHours, AbsValue(baseNumberOfShares / 4), baseNumberOfShares);
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+#***********************************************************************
+
+#***********************************************************************
+#Begin Strategy specific code
+def longMA = SimpleMovingAvg(length = longMAPeriod);
+
+def ttmSqueezeVolComp = TTM_Squeeze().VolComp;
+def ttmSqueezeSqueezeAlert = TTM_Squeeze().SqueezeAlert;
+def ttmSqueezeHistogram = TTM_Squeeze().Histogram;
+
+def macdShortMA = MACD();
+def macdLongMA = MACD().Avg;
+def macdDiff = MACD().Diff;
+
+def isPriceAboveLongMA = If(!ensureAboveLongMA, yes, buyPrice >= longMA);
+#def isInSqueeze = 
+def hasMACDSignal = macdDiff > 0;
+
+def longMAAngle = (longMA - longMA[numberOfPeriodsBackForLongMAAngle]) / numberOfPeriodsBackForLongMAAngle;
+def isLongMAAngleEnough = longMAAngle >= acceptableLongMAAngle;
+
+#***********************************************************************
+#Begin Buy Order Section
+def meetsTTMRequirements = ttmSqueezeSqueezeAlert[-1] and !ttmSqueezeSqueezeAlert[0] and !ttmSqueezeSqueezeAlert[1] and !ttmSqueezeSqueezeAlert[2] and ttmSqueezeHistogram > 0;
+def buy = isWithinTradingHours and isPriceAboveLongMA and isLongMAAngleEnough and hasMACDSignal and meetsTTMRequirements;
+
+addOrder( OrderType.BUY_TO_OPEN, buy, tradeSize = numberOfShares, price = buyPrice, tickColor = Color.LIME, arrowColor = Color.LIME, name = "TTM_Squeeze_MACD_SMA[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + "] BUY @" + buyPrice);
+
+#***********************************************************************
+#Begin Sell Order Section
+def isGain = sellPrice > EntryPrice();
+
+def percentGainLoss = ((sellPrice - buyPrice) / sellPrice) * 100;
+
+def cutLoss =  (buyPrice > sellPrice and percentGainLoss < (percentAcceptableLoss * -1));
+
+def sell = (isWithinTradingHours and !ttmSqueezeSqueezeAlert and ttmSqueezeSqueezeAlert[1]) or (!isWithinTradingHours and EntryPrice() > 0) or cutLoss;
+
+#AddChartBubble(buy, "price location" = HIGH, color = Color.GRAY, text = "1:" + longMAAngle + "\n2:" + hasMACDSignal + "\n3:" + ttmSqueezeSqueezeAlert[1] + "\nbuy:" + (if buy then "yes" else "no") + "\n4:" + ttmSqueezeHistogram + "\n5:" + buyPrice + "\n6:" + numberOfShares);
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell and isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "TTM_Squeeze_MACD_SMA[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell and !isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "TTM_Squeeze_MACD_SMA[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
