@@ -1,0 +1,81 @@
+#High/Low Fibonacci Guidelines Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/01/2020
+input FibonacciPeriod = AggregationPeriod.MIN;
+input NumberOfPeriodsForHL = 15;
+input ExcludeWick = yes;
+input FibExt1 = 1.382;
+input FibExt2 = 1.621;
+input ShowSignals = yes;
+
+def HighestInPeriod = getValue(if(ExcludeWick, if(close(period = FibonacciPeriod) > open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), getMaxValueOffset(if(ExcludeWick, if(close(period = FibonacciPeriod) > open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), NumberOfPeriodsForHL), NumberOfPeriodsForHL);
+#AddLabel(yes, HighestInPeriod);
+
+def LowestInPeriod = getValue(if(ExcludeWick, if(close(period = FibonacciPeriod) < open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), getMinValueOffset(if(ExcludeWick, if(close(period = FibonacciPeriod) < open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), NumberOfPeriodsForHL), NumberOfPeriodsForHL);
+#AddLabel(yes, LowestInPeriod);
+
+plot fibHigh = HighestInPeriod[0];
+fibHigh.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibHigh.SetDefaultColor(Color.GREEN);
+
+plot fibLow = LowestInPeriod[0];
+fibLow.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibLow.SetDefaultColor(Color.RED);
+
+def fibWidth = fibHigh - fibLow;
+
+
+plot fibMid = (fibHigh+fibLow)/2;
+fibMid.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibMid.SetDefaultColor(Color.WHITE);
+plot fibExtUp1 = fibHigh + fibWidth*(FibExt1 - 1);
+fibExtUp1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtUp1.SetDefaultColor(Color.LIGHT_GREEN);
+plot fibExtDown1 = fibLow - fibWidth*(FibExt1 - 1);
+fibExtDown1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtDown1.SetDefaultColor(Color.LIGHT_RED);
+plot fibExtUp2= fibHigh + fibWidth*(FibExt2 - 1);
+fibExtUp2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtUp2.SetDefaultColor(Color.DARK_GREEN);
+plot fibExtDown2 = fibLow - fibWidth*(FibExt2 - 1);
+fibExtDown2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtDown2.SetDefaultColor(Color.DARK_RED);
+
+#Begin Buy Indicators
+def isExtendedLow = low < fibLow;
+def isVeryExtendedLow = low < fibExtDown1;
+def isExtremelyExtendedLow = low < fibExtDown2;
+plot extendedLowArrow = if(isExtendedLow, low - 0.05, Double.NaN);
+extendedLowArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extendedLowArrow.AssignValueColor(color = if isExtremelyExtendedLow then Color.LIGHT_GREEN else if isVeryExtendedLow then Color.GREEN else Color.DARK_GREEN);
+extendedLowArrow.SetHiding(!ShowSignals);
+
+plot veryExtendedLowArrow = if(isVeryExtendedLow, low - 0.05, Double.NaN);
+veryExtendedLowArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+veryExtendedLowArrow.SetDefaultColor(color = Color.GREEN);
+veryExtendedLowArrow.SetHiding(!ShowSignals);
+
+plot extremelyExtendedLowArrow = if(isExtremelyExtendedLow, low - 0.05, Double.NaN);
+extremelyExtendedLowArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extremelyExtendedLowArrow.SetDefaultColor(color = Color.LIGHT_GREEN);
+extremelyExtendedLowArrow.SetHiding(!ShowSignals);
+
+#Begin Short Sell Indicators
+def isExtendedHigh = high > fibHigh;
+def isVeryExtendedHigh = high > fibExtUp1;
+def isExtremelyExtendedHigh = high > fibExtUp2;
+plot extendedHighArrow = if(isExtendedHigh, high + 0.05, Double.NaN);
+extendedHighArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extendedHighArrow.AssignValueColor(color = if isExtremelyExtendedHigh then Color.LIGHT_RED else if isVeryExtendedHigh then Color.RED else Color.DARK_RED);
+extendedHighArrow.SetHiding(!ShowSignals);
+
+plot veryExtendedHighArrow = if(isVeryExtendedHigh, high + 0.05, Double.NaN);
+veryExtendedHighArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+veryExtendedHighArrow.SetDefaultColor(color = Color.RED);
+veryExtendedHighArrow.SetHiding(!ShowSignals);
+
+plot extremelyExtendedHighArrow = if(isExtremelyExtendedHigh, high + 0.05, Double.NaN);
+extremelyExtendedHighArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extremelyExtendedHighArrow.SetDefaultColor(color = Color.LIGHT_RED);
+extremelyExtendedHighArrow.SetHiding(!ShowSignals);
