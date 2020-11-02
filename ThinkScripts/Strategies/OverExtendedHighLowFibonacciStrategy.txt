@@ -1,0 +1,220 @@
+#Over-extended Low/High Fibonacci Strategy
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/01/2020
+
+input accountSize = 5000;
+input accountPercent = 10;
+input maxShares = 1000;
+input minAverageVolumeForFullSize = 75000;
+input avgVolPeriod = 5;
+
+input percentAcceptableLoss = 0.5;
+
+input includePremarket = no;
+
+#Begin Strategy Specific Inputs
+input FibonacciPeriod = AggregationPeriod.MIN;
+input NumberOfPeriodsForHL = 15;
+input ExcludeWick = yes;
+input FibExt1 = 1.382;
+input FibExt2 = 1.621;
+input BuyExtensionLevel = {default support, fib1, fib2};
+#End Strategy Specific Inputs
+
+script HighLowFibonacciGuidLines {
+input FibonacciPeriod = AggregationPeriod.MIN;
+input NumberOfPeriodsForHL = 15;
+input ExcludeWick = yes;
+input FibExt1 = 1.382;
+input FibExt2 = 1.621;
+input ShowSignals = yes;
+
+def HighestInPeriod = getValue(if(ExcludeWick, if(close(period = FibonacciPeriod) > open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), getMaxValueOffset(if(ExcludeWick, if(close(period = FibonacciPeriod) > open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), NumberOfPeriodsForHL), NumberOfPeriodsForHL);
+#AddLabel(yes, HighestInPeriod);
+
+def LowestInPeriod = getValue(if(ExcludeWick, if(close(period = FibonacciPeriod) < open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), getMinValueOffset(if(ExcludeWick, if(close(period = FibonacciPeriod) < open(period = FibonacciPeriod), close(period = FibonacciPeriod), open(period = FibonacciPeriod)), high(period = FibonacciPeriod)), NumberOfPeriodsForHL), NumberOfPeriodsForHL);
+#AddLabel(yes, LowestInPeriod);
+
+plot fibHigh = HighestInPeriod[0];
+fibHigh.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibHigh.SetDefaultColor(Color.GREEN);
+fibHigh.SetHiding(!ShowSignals);
+
+plot fibLow = LowestInPeriod[0];
+fibLow.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibLow.SetDefaultColor(Color.RED);
+fibLow.SetHiding(!ShowSignals);
+
+def fibWidth = fibHigh - fibLow;
+
+
+plot fibMid = (fibHigh+fibLow)/2;
+fibMid.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibMid.SetDefaultColor(Color.WHITE);
+fibMid.SetHiding(yes);
+plot fibExtUp1 = fibHigh + fibWidth*(FibExt1 - 1);
+fibExtUp1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtUp1.SetDefaultColor(Color.LIGHT_GREEN);
+fibExtUp1.SetHiding(yes);
+plot fibExtDown1 = fibLow - fibWidth*(FibExt1 - 1);
+fibExtDown1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtDown1.SetDefaultColor(Color.LIGHT_RED);
+fibExtDown1.SetHiding(yes);
+plot fibExtUp2= fibHigh + fibWidth*(FibExt2 - 1);
+fibExtUp2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtUp2.SetDefaultColor(Color.DARK_GREEN);
+fibExtUp2.SetHiding(yes);
+plot fibExtDown2 = fibLow - fibWidth*(FibExt2 - 1);
+fibExtDown2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fibExtDown2.SetDefaultColor(Color.DARK_RED);
+fibExtDown2.SetHiding(yes);
+
+#Begin Buy Indicators
+def isExtendedLow = low < fibLow;
+def isVeryExtendedLow = low < fibExtDown1;
+def isExtremelyExtendedLow = low < fibExtDown2;
+plot extendedLowArrow = if(isExtendedLow, low - 0.05, Double.NaN);
+extendedLowArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extendedLowArrow.AssignValueColor(color = if isExtremelyExtendedLow then Color.LIGHT_GREEN else if isVeryExtendedLow then Color.GREEN else Color.DARK_GREEN);
+extendedLowArrow.SetHiding(yes);
+
+plot veryExtendedLowArrow = if(isVeryExtendedLow, low - 0.05, Double.NaN);
+veryExtendedLowArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+veryExtendedLowArrow.SetDefaultColor(color = Color.GREEN);
+veryExtendedLowArrow.SetHiding(yes);
+
+plot extremelyExtendedLowArrow = if(isExtremelyExtendedLow, low - 0.05, Double.NaN);
+extremelyExtendedLowArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extremelyExtendedLowArrow.SetDefaultColor(color = Color.LIGHT_GREEN);
+extremelyExtendedLowArrow.SetHiding(yes);
+
+#Begin Short Sell Indicators
+def isExtendedHigh = high > fibHigh;
+def isVeryExtendedHigh = high > fibExtUp1;
+def isExtremelyExtendedHigh = high > fibExtUp2;
+plot extendedHighArrow = if(isExtendedHigh, high + 0.05, Double.NaN);
+extendedHighArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extendedHighArrow.AssignValueColor(color = if isExtremelyExtendedHigh then Color.LIGHT_RED else if isVeryExtendedHigh then Color.RED else Color.DARK_RED);
+extendedHighArrow.SetHiding(yes);
+
+plot veryExtendedHighArrow = if(isVeryExtendedHigh, high + 0.05, Double.NaN);
+veryExtendedHighArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+veryExtendedHighArrow.SetDefaultColor(color = Color.RED);
+veryExtendedHighArrow.SetHiding(yes);
+
+plot extremelyExtendedHighArrow = if(isExtremelyExtendedHigh, high + 0.05, Double.NaN);
+extremelyExtendedHighArrow.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+extremelyExtendedHighArrow.SetDefaultColor(color = Color.LIGHT_RED);
+extremelyExtendedHighArrow.SetHiding(yes);
+}
+
+#***********************************************************************
+#Begin Strategy specific code
+
+def extendedLowArrow = HighLowFibonacciGuidLines(FibonacciPeriod, NumberOfPeriodsForHL, ExcludeWick, FibExt1, FibExt2, no).ExtendedLowArrow;
+def isEL = (extendedLowArrow > 0);
+def extendedLow = HighLowFibonacciGuidLines(FibonacciPeriod, NumberOfPeriodsForHL, ExcludeWick, FibExt1, FibExt2, no).fibLow;
+
+def veryExtendedLowArrow = HighLowFibonacciGuidLines(FibonacciPeriod, NumberOfPeriodsForHL, ExcludeWick, FibExt1, FibExt2, no).VeryExtendedLowArrow;
+def isVEL = (veryExtendedLowArrow > 0);
+def veryExtendedLow = HighLowFibonacciGuidLines(FibonacciPeriod, NumberOfPeriodsForHL, ExcludeWick, FibExt1, FibExt2, no).fibExtDown1;
+
+def extremelyExtendedLowArrow = HighLowFibonacciGuidLines(FibonacciPeriod, NumberOfPeriodsForHL, ExcludeWick, FibExt1, FibExt2, no).ExtremelyExtendedLowArrow;
+def isEEL = (extremelyExtendedLowArrow > 0);
+def extremelyExtendedLow = HighLowFibonacciGuidLines(FibonacciPeriod, NumberOfPeriodsForHL, ExcludeWick, FibExt1, FibExt2, no).fibExtDown2;
+
+#Price to buy in at
+def fibPrice;
+if (isEEL == yes) {
+    fibPrice = extremelyExtendedLow;
+} else {
+    if (isVEL == yes) {
+        fibPrice = veryExtendedLow;
+    } else {
+        if (isEL == yes) {
+            fibPrice = extendedLow;
+        } else { 
+            fibPrice = Double.NaN; 
+        }
+    }
+}
+
+def buyPrice; 
+if (fibPrice == Double.NaN) { 
+    buyPrice = Double.NaN;
+} else {
+    buyPrice = (low + ((fibPrice - low) / 2));
+}
+
+def isRedCandle = close < open;
+def bodyTopPrice = if(isRedCandle, open, close);
+def sellPrice = open;#high - if (high > bodyTopPrice, ((high - bodyTopPrice)/2), high);
+
+#***********************************************************************
+#Calculate boilerplate minimum volume, premarket and share size variables
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / buyPrice, numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / buyPrice, numberOfDigits = 0 ), maxShares / 2));
+
+def numberOfShares = If(!isWithinTradingHours, Round(AbsValue(baseNumberOfShares / 4), numberOfDigits = 0), AbsValue(baseNumberOfShares));
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+#***********************************************************************
+
+#***********************************************************************
+#Begin Buy Order Section
+
+def meetsBuyLevel;
+switch (BuyExtensionLevel) {
+    case support:
+        meetsBuyLevel = isEL;
+    case fib1:
+        meetsBuyLevel = isVEL;
+    case fib2:
+        meetsBuyLevel = isEEL;
+}
+
+def buy = isWithinTradingHours and meetsBuyLevel and (isEL) and (low <= (veryExtendedLow + (extendedLow - veryExtendedLow)));
+
+# + (if ((isExtendedLow) and (low <= (veryExtendedLow + (extendedLow - veryExtendedLow)))) then "yes" else "no") + "\n2:" + (if (buy) then "yes" else "no") + "\n"
+#AddChartBubble(buy, high, "1:" + (if buy then "buy" else "no"));
+#AddChartBubble(buy, high, "2:" + BuyExtensionLevel);
+#AddChartBubble(isEL, high, (
+#if (isEEL)
+#then "extreme"
+#else 
+#    if (isVEL)
+#    then "very"
+#    else
+#        if (isEL)
+#        then "extended"
+#        else "NaN") + "\n" + extremelyExtendedLow + "\n" + buyPrice + "\n" + (if (buy) then "yes" else "no") + "\n" + numberOfShares);
+
+addOrder( OrderType.BUY_TO_OPEN, buy, tradeSize = numberOfShares, price = buyPrice, tickColor = Color.LIME, arrowColor = Color.LIME, name = "OverExtendedLowHighFibonnaci[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + "] BUY @" + buyPrice);
+
+#***********************************************************************
+#Begin Sell Order Section
+def isGain = sellPrice > EntryPrice();
+
+def percentGainLoss = ((sellPrice - buyPrice) / sellPrice) * 100;
+
+def cutLoss =  (buyPrice > sellPrice and percentGainLoss < (percentAcceptableLoss * -1));
+
+def sell = (isGain and sellPrice >= extendedLow[1]) or (!isWithinTradingHours and EntryPrice() > 0) or cutLoss;
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell and isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "OverExtendedLowHighFibonnaci[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell and !isGain, tradeSize = numberOfShares, price = sellPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "OverExtendedLowHighFibonnaci[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + "] SELL @" + sellPrice + " P/L%: " + percentGainLoss );
