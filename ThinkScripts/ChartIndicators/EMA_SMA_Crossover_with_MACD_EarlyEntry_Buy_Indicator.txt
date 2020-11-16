@@ -1,0 +1,65 @@
+#EMA SMA Crossover with MACD Strategy Early Entry Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/11/2020
+
+input shortEMALength = 8;
+input midMALength = 12;
+input smaLength = 26;
+input ensureUptrend = no;
+input earlyEntry = yes;
+input conservativeSell = no;
+
+input avgVolPeriod = 5;
+input uptrendPeriod = 5;
+input includePreMarket = no;
+input candleAggregationPeriod = AggregationPeriod.MIN;
+
+input MACDMinValue = 0.0;
+input MACDEnsureMAsBelowZero = no;
+
+input PercentAcceptableLoss = 0.1;
+
+def buyOption = open(priceType = PriceType.BID);
+def sellPrice = open(priceType = PriceType.ASK);
+input minAverageVolumeForFullSize = 75000;
+
+def shortMA = MovAvgExponential( length = shortEMALength );
+def midMA = SimpleMovingAvg( length = midMALength );
+def longMA = SimpleMovingAvg( length = smaLength  );
+def macdShortMA = MACD();
+def macdLongMA = MACD().Avg;
+def macdDiff = MACD().Diff;
+
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+def isTrendingUp = If(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and longMA > longMA[uptrendPeriod - 1]);
+
+def areMACDMAsBelowZero = if(MACDEnsureMAsBelowZero, (macdLongMA <= 0.0 and macdShortMA <= 0.0), yes);
+
+def avgPrcRange = (if(open[1] > close[1], open[1] - close[1], close[1] - open[1]) + if(open[2] > close[2], open[2] - close[2], close[2] - open[2]) + if(open[3] > close[3], open[3] - close[3], close[3] - open[3]) + if(open[4] > close[4], open[4] - close[4], close[4] - open[4]) + if(open[5] > close[5], open[5] - close[5], close[5] - open[5])) / 5;
+
+def crossoverSignal = shortMA[1] < longMA[1] and shortMA[0] >= longMA[0];
+
+def earlyEntrySignal = (shortMA < longMA and (longMA - shortMA) <= (avgPrcRange / 2)) or crossoverSignal;
+
+def buy = if(earlyEntry, earlyEntrySignal, crossoverSignal) and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+
+plot buySignal = buy and !(buy[1] or buy[2] or buy[3] or buy[4] or buy[5]);
+buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buySignal.SetDefaultColor(color = Color.LIME);
+buySignal.SetLineWeight(lineWeight = 3);
