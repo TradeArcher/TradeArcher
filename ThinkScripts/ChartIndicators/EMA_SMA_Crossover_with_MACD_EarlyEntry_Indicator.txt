@@ -1,6 +1,6 @@
 #EMA SMA Crossover with MACD Strategy Early Entry Indicator
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 11/11/2020
 
 input shortEMALength = 8;
@@ -80,12 +80,16 @@ if earlyEntry then
 else
     if(conservativeSell, (shortMA <= midMA and shortMA[1] > midMA[1]), (shortMA <= longMA and shortMA[1] > longMA[1]));
 
-plot sellSignal = sell;
-sellSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
-sellSignal.SetDefaultColor(color = Color.LIME);
-sellSignal.SetLineWeight(lineWeight = 3);
+def failed = (shortMA < longMA and (buySignal[1] or buySignal[2]) and askPrice < cutLossLine);
 
-plot stopLossSignal = shortMA <= longMA and (buySignal[1] or buySignal[2]) and askPrice < longMA - (longMA - (longMA - avgPrcRange));
-stopLossSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
-stopLossSignal.SetDefaultColor(color = Color.LIGHT_RED);
-stopLossSignal.SetLineWeight(lineWeight = 3);
+plot sellSignal = (sell or failed) and isWithinTradingHours;
+sellSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+
+def buyPrice = if(buySignal, buyOption, buyPrice[1]);
+
+def isLoss = buyPrice[1] > sellPrice;
+
+#AddChartBubble(sellSignal, color = Color.WHITE, text = buyPrice + "\n" + sellPrice, "price location" = HIGH + 0.15);
+
+sellSignal.AssignValueColor(color = if (failed) then Color.RED else (if (isLoss) then Color.RED else Color.LIME) );
+sellSignal.SetLineWeight(lineWeight = 3);
