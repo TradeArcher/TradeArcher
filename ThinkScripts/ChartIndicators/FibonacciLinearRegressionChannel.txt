@@ -1,0 +1,58 @@
+#Fibonacci Linear Regression Channel Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/19/2020
+
+input NumberOfFibonacciLines = {one, default two, three};
+input FullRange = yes;
+input Length = 21;
+
+input FibExt1 = 0.236;
+input FibExt2 = 0.382;
+input FibExt3 = 0.618;
+
+input UseCandleBodyForHL = yes;
+
+def lineCount;
+
+switch (numberOfFibonacciLines) {
+    case one:
+        lineCount = 1;
+    case two:
+        lineCount = 2;
+    case three:
+        lineCount = 3;
+}
+
+def highValue = if(UseCandleBodyForHL, if(close > open, close, open), high);
+def lowValue = if(UseCandleBodyForHL, if(open < close, open, close), low);
+
+def highOfPeriod = HighestAll(highValue);
+def lowOfPeriod = LowestAll(lowValue);
+
+plot linReg = LinearRegChVar("full range" = fullRange, length = length, "width of channel" = 0.0);
+linReg.SetDefaultColor(color = Color.BLUE);
+
+def fibWidth = (highOfPeriod - lowofPeriod) / 2;
+
+plot lineRegFib1Up = linReg + fibWidth * fibExt1;
+lineRegFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
+
+plot lineRegFib1Down = linReg - fibWidth * fibExt1;
+lineRegFib1Down.SetDefaultColor(color = Color.DARK_ORANGE);
+
+plot lineRegFib2Up = linReg + fibWidth * fibExt2;
+lineRegFib2Up.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Up.SetHiding(lineCount < 2);
+
+plot lineRegFib2Down = linReg - fibWidth * fibExt2;
+lineRegFib2Down.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Down.SetHiding(lineCount < 2);
+
+plot lineRegFib3Up = linReg + fibWidth * fibExt3;
+lineRegFib3Up.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Up.SetHiding(lineCount < 3);
+
+plot lineRegFib3Down = linReg - fibWidth * fibExt3;
+lineRegFib3Down.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Up.SetHiding(lineCount < 3);
