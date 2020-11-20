@@ -3,13 +3,15 @@
 #Version: 0.1
 #Date Created: 11/19/2020
 
-input NumberOfFibonacciLines = {one, default two, three};
+input NumberOfFibonacciLines = {one, two, three, four, default five};
 input FullRange = yes;
 input Length = 21;
 
 input FibExt1 = 0.236;
 input FibExt2 = 0.382;
 input FibExt3 = 0.618;
+input FibExt4 = 0.786;
+input FibExt5 = 1.0;
 
 input UseCandleBodyForHL = yes;
 
@@ -22,6 +24,10 @@ switch (numberOfFibonacciLines) {
         lineCount = 2;
     case three:
         lineCount = 3;
+    case four:
+        lineCount = 4;
+    case five:
+        lineCount = 5;
 }
 
 def highValue = if(UseCandleBodyForHL, if(close > open, close, open), high);
@@ -56,3 +62,19 @@ lineRegFib3Up.SetHiding(lineCount < 3);
 plot lineRegFib3Down = linReg - fibWidth * fibExt3;
 lineRegFib3Down.SetDefaultColor(color = Color.LIGHT_RED);
 lineRegFib3Up.SetHiding(lineCount < 3);
+
+plot lineRegFib4Up = linReg + fibWidth * fibExt4;
+lineRegFib4Up.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Up.SetHiding(lineCount < 4);
+
+plot lineRegFib4Down = linReg - fibWidth * fibExt4;
+lineRegFib4Down.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Down.SetHiding(lineCount < 4);
+
+plot lineRegFib5Up = linReg + fibWidth * fibExt5;
+lineRegFib5Up.SetDefaultColor(color = Color.VIOLET);
+lineRegFib5Up.SetHiding(lineCount < 5);
+
+plot lineRegFib5Down = linReg - fibWidth * fibExt5;
+lineRegFib5Down.SetDefaultColor(color = Color.VIOLET);
+lineRegFib5Down.SetHiding(lineCount < 5);
