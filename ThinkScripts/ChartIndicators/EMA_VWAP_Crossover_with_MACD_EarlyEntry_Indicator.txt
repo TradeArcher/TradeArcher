@@ -1,0 +1,133 @@
+#EMA VWAP Crossover with MACD Strategy Early Entry Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/20/2020
+
+declare hide_on_daily;
+
+input vwapTimeFrame = {default DAY, WEEK, MONTH};
+input shortEMALength = 8;
+input midMALength = 12;
+input smaLength = 26;
+input ensureUptrend = no;
+input earlyEntry = yes;
+input conservativeSell = yes;
+
+input avgVolPeriod = 5;
+input uptrendPeriod = 5;
+input includePreMarket = no;
+input candleAggregationPeriod = AggregationPeriod.MIN;
+
+input MACDMinValue = 0.0;
+input MACDEnsureMAsBelowZero = no;
+
+input PercentAcceptableLoss = 0.1;
+
+def buyOption = open(priceType = PriceType.BID);
+def sellPrice = open(priceType = PriceType.ASK);
+input minAverageVolumeForFullSize = 75000;
+
+def shortMA = MovAvgExponential( length = shortEMALength );
+def midMA = SimpleMovingAvg( length = midMALength );
+def longMA = SimpleMovingAvg( length = smaLength  );
+
+def cap = getAggregationPeriod();
+def errorInAggregation =
+    vwapTimeFrame == vwapTimeFrame.DAY and cap >= AggregationPeriod.WEEK or
+    vwapTimeFrame == vwapTimeFrame.WEEK and cap >= AggregationPeriod.MONTH;
+assert(!errorInAggregation, "timeFrame should be not less than current chart aggregation period");
+
+def yyyyMmDd = getYyyyMmDd();
+def periodIndx;
+switch (vwapTimeFrame) {
+case DAY:
+    periodIndx = yyyyMmDd;
+case WEEK:
+    periodIndx = Floor((daysFromDate(first(yyyyMmDd)) + getDayOfWeek(first(yyyyMmDd))) / 7);
+case MONTH:
+    periodIndx = roundDown(yyyyMmDd / 100, 0);
+}
+def isPeriodRolled = compoundValue(1, periodIndx != periodIndx[1], yes);
+
+def volumeSum;
+def volumeVwapSum;
+def volumeVwap2Sum;
+
+if (isPeriodRolled) {
+    volumeSum = volume;
+    volumeVwapSum = volume * vwap;
+    volumeVwap2Sum = volume * Sqr(vwap);
+} else {
+    volumeSum = compoundValue(1, volumeSum[1] + volume, volume);
+    volumeVwapSum = compoundValue(1, volumeVwapSum[1] + volume * vwap, volume * vwap);
+    volumeVwap2Sum = compoundValue(1, volumeVwap2Sum[1] + volume * Sqr(vwap), volume * Sqr(vwap));
+}
+def price = volumeVwapSum / volumeSum;
+
+
+def vwapValue = price;
+
+
+#def vwapValue = VWAP(period = AggregationPeriod.DAY, priceType = PriceType.LAST);
+def macdShortMA = MACD();
+def macdLongMA = MACD().Avg;
+def macdDiff = MACD().Diff;
+
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+def isTrendingUp = If(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and vwapValue > vwapValue[uptrendPeriod - 1]);
+
+def areMACDMAsBelowZero = if(MACDEnsureMAsBelowZero, (macdLongMA <= 0.0 and macdShortMA <= 0.0), yes);
+
+def avgPrcRange = ATR();
+
+def crossoverSignal = shortMA[1] < vwapValue[1] and shortMA[0] >= vwapValue[0];
+
+def earlyEntrySignal = (shortMA < vwapValue and (vwapValue - shortMA) <= (avgPrcRange / 2) and shortMA[1] < vwapValue[1]) or crossoverSignal;
+
+def buy = if(earlyEntry, earlyEntrySignal, crossoverSignal) and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
+
+plot buySignal = if(buy and !(buy[1] or buy[2] or buy[3] or buy[4] or buy[5]), yes, no);
+buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buySignal.SetDefaultColor(color = Color.LIME);
+buySignal.SetLineWeight(lineWeight = 3);
+
+#AddChartBubble(buySignal, color = Color.WHITE, text = shortMA + "\n" + vwapValue, "price location" = HIGH);
+
+def askPrice = open(priceType = PriceType.ASK);
+
+plot cutLossLine = vwapValue -(vwapValue - (vwapValue - avgPrcRange));
+cutLossLine.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+cutLossLine.SetDefaultColor(color = Color.PINK);
+cutLossLine.SetLineWeight(lineWeight = 3);
+cutLossLine.SetHiding(yes);
+
+def sell = 
+if earlyEntry then
+    (buy or buy[1] or buy[2] or buy[3] or buy[4]) == no
+    and
+    if(conservativeSell, (shortMA <= midMA and shortMA[1] > midMA[1]), (shortMA <= longMA and shortMA[1] > longMA[1]))
+else
+    if(conservativeSell, (shortMA <= midMA and shortMA[1] > midMA[1]), (shortMA <= longMA and shortMA[1] > longMA[1]));
+
+def failed = (shortMA < longMA and (buySignal[1] or buySignal[2]) and askPrice < cutLossLine);
+
+def isBelowVWAP = sellPrice < vwapValue and sellPrice[1] >= vwapValue[1];
+
+def isInTrade = if(buySignal, yes, if(((sell or failed or isBelowVWAP) and isWithinTradingHours), no, isInTrade[1]));
+
+plot sellSignal = (sell or failed or isBelowVWAP) and isWithinTradingHours and isInTrade[1];
+sellSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+
+#AddChartBubble(sellSignal, color = Color.WHITE, text = isInTrade[1], "price location" = HIGH);
+
+def buyPrice = if(buySignal, buyOption, buyPrice[1]);
+
+def isLoss = buyPrice[1] > sellPrice;
+
+#AddChartBubble(sellSignal, color = Color.WHITE, text = buyPrice + "\n" + sellPrice, "price location" = HIGH + 0.15);
+
+sellSignal.AssignValueColor(color = if (failed) then Color.RED else (if (isLoss) then Color.RED else Color.LIME) );
+sellSignal.SetLineWeight(lineWeight = 3);
