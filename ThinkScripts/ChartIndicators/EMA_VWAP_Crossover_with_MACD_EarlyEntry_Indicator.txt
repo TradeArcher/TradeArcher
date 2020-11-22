@@ -131,3 +131,8 @@ def isLoss = buyPrice[1] > sellPrice;
 
 sellSignal.AssignValueColor(color = if (failed) then Color.RED else (if (isLoss) then Color.RED else Color.LIME) );
 sellSignal.SetLineWeight(lineWeight = 3);
+
+#Potential Crossover Label Signal
+def showLabel = (shortMA < vwapValue and (vwapValue - shortMA) <= (avgPrcRange) and shortMA[1] < vwapValue[1]) and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
+
+AddLabel(visible = showLabel, color = Color.GREEN, text = "Potential VWAP Crossover");
