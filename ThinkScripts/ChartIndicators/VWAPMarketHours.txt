@@ -1,0 +1,37 @@
+#VWAP Market Hours Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/22/2020
+
+#Given that VWAP is a cumulative indicator, meaning the more bars on the chart the more data is uses for its calculations, and volume increases significantly during market hours, it can be nice to have a VWAP that starts at market open instead of during the premarket.  This indicator plots the VWAP starting at market open until market close.
+
+#NOTE: It only works on the intraday chart.
+
+declare hide_on_daily;
+
+def isRollover = GetYYYYMMDD() != GetYYYYMMDD()[1];
+
+def beforeStart = GetTime() < RegularTradingStart(GetYYYYMMDD());
+
+def afterEnd = GetTime() > RegularTradingEnd(GetYYYYMMDD());
+
+def firstBarOfDay = if (beforeStart[1] == 1 and beforeStart == 0) or (isRollover and beforeStart == 0) then 1 else 0;
+
+def lastBarOfDay = if((afterEnd[-1] == 1 and afterEnd == 0) or (isRollover[-1] and firstBarOfDay[-1]), 1, 0);
+
+def firstBarNumber = If(firstBarOfDay, BarNumber(), firstBarNumber[1]);
+def lastBarNumber = If(lastBarOfDay, BarNumber(), lastBarNumber[1]);
+
+def isMarketOpened = firstBarNumber > 0 and lastBarNumber == 0;
+
+def cumulativePeriod = if(BarNumber() - firstBarNumber > 0, BarNumber() - firstBarNumber, 1);
+def typicalPrice = (high + low + close) / 3;
+def typicalPriceVolume = typicalPrice * volume;
+
+def cumulativeTypicalPriceVolume = fold typicalPriceVolumeIx = 0 to cumulativePeriod with typicalPriceVolumeTotal = 0 do typicalPriceVolumeTotal + getValue(typicalPriceVolume, typicalPriceVolumeIx);
+def cumulativeVolume = fold volumeIx = 0 to cumulativePeriod with volumeTotal = 0 do volumeTotal + getValue(volume, volumeIx);
+def vwapValue = if(isMarketOpened, cumulativeTypicalPriceVolume / cumulativeVolume, Double.NaN);
+
+#AddChartBubble(isMarketOpened, high, firstBarNumber + "\n" + lastBarNumber);
+
+plot vwapMarketOpen = vwapValue;
