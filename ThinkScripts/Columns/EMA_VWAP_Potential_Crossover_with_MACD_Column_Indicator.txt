@@ -1,0 +1,77 @@
+#Potential EMA VWAP Crossover with MACD Strategy Early Entry Column Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/22/2020
+
+declare hide_on_daily;
+
+input vwapTimeFrame = {default DAY, WEEK, MONTH};
+input shortEMALength = 8;
+input ensureUptrend = no;
+input earlyEntry = yes;
+input conservativeSell = yes;
+
+input uptrendPeriod = 5;
+input includePreMarket = no;
+
+input MACDMinValue = 0.0;
+input MACDEnsureMAsBelowZero = no;
+
+def buyOption = open(priceType = PriceType.BID);
+def sellPrice = open(priceType = PriceType.ASK);
+input minAverageVolumeForFullSize = 75000;
+
+def shortMA = MovAvgExponential( length = shortEMALength );
+
+def cap = getAggregationPeriod();
+def errorInAggregation =
+    vwapTimeFrame == vwapTimeFrame.DAY and cap >= AggregationPeriod.WEEK or
+    vwapTimeFrame == vwapTimeFrame.WEEK and cap >= AggregationPeriod.MONTH;
+assert(!errorInAggregation, "timeFrame should be not less than current chart aggregation period");
+
+def yyyyMmDd = getYyyyMmDd();
+def periodIndx;
+switch (vwapTimeFrame) {
+case DAY:
+    periodIndx = yyyyMmDd;
+case WEEK:
+    periodIndx = Floor((daysFromDate(first(yyyyMmDd)) + getDayOfWeek(first(yyyyMmDd))) / 7);
+case MONTH:
+    periodIndx = roundDown(yyyyMmDd / 100, 0);
+}
+def isPeriodRolled = compoundValue(1, periodIndx != periodIndx[1], yes);
+
+def volumeSum;
+def volumeVwapSum;
+def volumeVwap2Sum;
+
+if (isPeriodRolled) {
+    volumeSum = volume;
+    volumeVwapSum = volume * vwap;
+    volumeVwap2Sum = volume * Sqr(vwap);
+} else {
+    volumeSum = compoundValue(1, volumeSum[1] + volume, volume);
+    volumeVwapSum = compoundValue(1, volumeVwapSum[1] + volume * vwap, volume * vwap);
+    volumeVwap2Sum = compoundValue(1, volumeVwap2Sum[1] + volume * Sqr(vwap), volume * Sqr(vwap));
+}
+
+def price = volumeVwapSum / volumeSum;
+
+def vwapValue = price;
+
+def macdShortMA = MACD();
+def macdLongMA = MACD().Avg;
+def macdDiff = MACD().Diff;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+def isTrendingUp = If(!ensureUptrend, yes, shortMA > shortMA[uptrendPeriod] and vwapValue > vwapValue[uptrendPeriod - 1]);
+
+def areMACDMAsBelowZero = if(MACDEnsureMAsBelowZero, (macdLongMA <= 0.0 and macdShortMA <= 0.0), yes);
+
+def avgPrcRange = ATR();
+
+#Potential Crossover Label Signal
+def showLabel = (shortMA < vwapValue and (vwapValue - shortMA) <= (avgPrcRange) and shortMA[1] < vwapValue[1]) and isWithinTradingHours and isTrendingUp and macdDiff >= MACDMinValue and areMACDMAsBelowZero;
+
+AddLabel(visible = showLabel, color = Color.GREEN, text = "Potential VWAP Crossover");
