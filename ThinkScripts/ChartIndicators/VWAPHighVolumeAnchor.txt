@@ -1,0 +1,67 @@
+#VWAP High Volume Anchor Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/22/2020
+
+#This indicator will recalculate the VWAP starting from every point where the volume exceeds the hotPct percent for more than the highVolumeMinPeriods.
+
+#Begin High Volume Indicator Section
+
+# hiVolume indicator
+# source: http://tinboot.blogspot.com
+# author: allen everhart
+
+input length = 20;
+input type = { default SMP, EXP } ;
+input length1 = 20 ;
+input hotPct = 50.0;
+input highVolumeMinPeriods = 5; #Must exceed the high volume level for at least 5 bars to trigger the VWAP adjustment
+
+def ma =
+if type == type.SMP then
+SimpleMovingAvg(volume, length)
+else
+MovAvgExponential(volume, length);
+
+def hv =
+if 100 * ((volume / ma) - 1) >= hotPct 
+then
+    ma
+else
+    Double.NaN;
+
+#End High Volume Indicator Section
+
+def bn = BarNumber();
+
+def vwapAdjusted;
+def lastPeakVolumeBarNumber;
+if (bn == 1) {
+    lastPeakVolumeBarNumber = 1;
+    vwapAdjusted = yes;
+}
+else {
+    if (Sum(hv, highVolumeMinPeriods) > highVolumeMinPeriods) {
+        lastPeakVolumeBarNumber = bn;
+        vwapAdjusted = yes;
+    }
+    else {
+        lastPeakVolumeBarNumber = lastPeakVolumeBarNumber[1];
+        vwapAdjusted = no;
+    }
+}
+
+def cumulativePeriod = if(BarNumber() - lastPeakVolumeBarNumber > 0, BarNumber() - lastPeakVolumeBarNumber, 1);
+
+def typicalPrice = (high + low + close) / 3;
+def typicalPriceVolume = typicalPrice * volume;
+
+def cumulativeTypicalPriceVolume = fold typicalPriceVolumeIx = 0 to cumulativePeriod with typicalPriceVolumeTotal = 0 do typicalPriceVolumeTotal + getValue(typicalPriceVolume, typicalPriceVolumeIx);
+def cumulativeVolume = fold volumeIx = 0 to cumulativePeriod with volumeTotal = 0 do volumeTotal + getValue(volume, volumeIx);
+plot vwapValue = cumulativeTypicalPriceVolume / cumulativeVolume;
+vwapValue.SetDefaultColor(color = Color.VIOLET);
+
+plot vwapAdjustmentPoint = if(vwapAdjusted, vwapValue, Double.NaN);
+vwapAdjustmentPoint.SetPaintingStrategy( PaintingStrategy.TRIANGLES);
+vwapAdjustmentPoint.SetDefaultColor(color = Color.VIOLET);
+
