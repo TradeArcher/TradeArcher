@@ -11,14 +11,13 @@
 # source: http://tinboot.blogspot.com
 # author: allen everhart
 
-input length = 20;
-input type = { default SMP, EXP } ;
-input length1 = 20 ;
+input length = 26;
+input type = { default Simple, Exponential } ;
 input hotPct = 50.0;
 input highVolumeMinPeriods = 5; #Must exceed the high volume level for at least 5 bars to trigger the VWAP adjustment
 
 def ma =
-if type == type.SMP then
+if type == type.Simple then
 SimpleMovingAvg(volume, length)
 else
 MovAvgExponential(volume, length);
@@ -34,6 +33,8 @@ else
 
 def bn = BarNumber();
 
+def totalHVBars = fold ix = 0 to highVolumeMinPeriods with countOfHVBars = 0 do countOfHVBars + if(getValue(hv, ix) > 0, 1, 0);
+
 def vwapAdjusted;
 def lastPeakVolumeBarNumber;
 if (bn == 1) {
@@ -41,7 +42,7 @@ if (bn == 1) {
     vwapAdjusted = yes;
 }
 else {
-    if (Sum(hv, highVolumeMinPeriods) > highVolumeMinPeriods) {
+    if (totalHVBars == highVolumeMinPeriods) {
         lastPeakVolumeBarNumber = bn;
         vwapAdjusted = yes;
     }
