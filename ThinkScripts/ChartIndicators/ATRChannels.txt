@@ -9,7 +9,7 @@
 #Added support for ATR calculated on multiple time frames
 #Added support for different price sources to calculate ATR's from
 
-input priceSource = {default close, open, high, low, bodyMid, HLMid};
+input priceSource = {default close, open, high, low, bodyLow, bodyHigh, bodyMid, HLMid};
 input ATRPriceAggregationPeriod = {default UseChartPeriod, MIN, TWO_MIN, THREE_MIN, FOUR_MIN, FIVE_MIN, TEN_MIN, FIFTEEN_MIN, TWENTY_MIN, THIRTY_MIN, HOUR, TWO_HOURS, FOUR_HOURS, DAY, TWO_DAYS, THREE_DAYS, FOUR_DAYS, WEEK, MONTH, OPT_EXP, QUARTER, YEAR};
 input ATRPeriod = 14;
 input averageType = AverageType.WILDERS;
@@ -81,10 +81,14 @@ switch (priceSource) {
         price = high(period = aggPrd)[offset];
     case low:
         price = low(period = aggPrd)[offset];
+    case bodyLow:
+        price = if(open(period = aggPrd)[offset] > close(period = aggPrd)[offset], close(period = aggPrd)[offset], open(period = aggPrd)[offset]);
+    case bodyHigh:
+        price = if(open(period = aggPrd)[offset] < close(period = aggPrd)[offset], close(period = aggPrd)[offset], open(period = aggPrd)[offset]);
     case bodyMid:
-        price = if(open(period = aggPrd)[offset] > close(period = aggPrd)[offset], (open(period = aggPrd)[offset] - open(period = aggPrd)[offset]) / 2, (close(period = aggPrd)[offset] - open(period = aggPrd)[offset]) / 2);
+        price = if(open(period = aggPrd)[offset] > close(period = aggPrd)[offset], ((open(period = aggPrd)[offset] - close(period = aggPrd)[offset]) / 2) + close(period = aggPrd)[offset], ((close(period = aggPrd)[offset] - open(period = aggPrd)[offset]) / 2) + open(period = aggPrd)[offset]);
     case HLMid:
-        price = (high(period = aggPrd)[offset] - low(period = aggPrd)[offset]) / 2;
+        price = ((high(period = aggPrd)[offset] - low(period = aggPrd)[offset]) / 2) + low(period = aggPrd)[offset];
     default:
         price = close(period = aggPrd)[offset];
 }
