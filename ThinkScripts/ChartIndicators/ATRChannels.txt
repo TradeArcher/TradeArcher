@@ -7,11 +7,18 @@
 
 #Added Cloud Channels
 #Added support for ATR calculated on multiple time frames
+#Added ATR factor customization inputs
 
 input ATRPriceAggregationPeriod = {default UseChartPeriod, MIN, TWO_MIN, THREE_MIN, FOUR_MIN, FIVE_MIN, TEN_MIN, FIFTEEN_MIN, TWENTY_MIN, THIRTY_MIN, HOUR, TWO_HOURS, FOUR_HOURS, DAY, TWO_DAYS, THREE_DAYS, FOUR_DAYS, WEEK, MONTH, OPT_EXP, QUARTER, YEAR};
 input ATRPeriod = 14;
 input averageType = AverageType.WILDERS;
 input offset = 1; #hint: which candle to start calculating ATR from (default is 1 for prevous candle)
+input atrUpperFactor1 = 1;
+input atrUpperFactor2 = 2;
+input atrUpperFactor3 = 3;
+input atrLowerFactor1 = 1;
+input atrLowerFactor2 = 2;
+input atrLowerFactor3 = 3;
 input showLowerAtr1Cloud = yes;
 input showLowerAtr2Cloud = yes;
 input showUpperAtr1Cloud = yes;
@@ -68,18 +75,18 @@ switch (ATRPriceAggregationPeriod) {
 def lastClose = close(period = aggPrd)[offset];
 def atrValue = MovingAverage(averageType, TrueRange(high(period = aggPrd), close(period = aggPrd), low(period = aggPrd)), ATRPeriod)[offset];
 
-plot atrLow1 = lastClose - atrValue;
+plot atrLow1 = lastClose - atrValue * atrLowerFactor1;
 atrLow1.SetDefaultColor(Color.LIGHT_RED);
-plot atrLow2 = lastClose - atrValue * 2;
+plot atrLow2 = lastClose - atrValue * atrLowerFactor2;
 atrLow2.SetDefaultColor(Color.RED);
-plot atrLow3 = lastClose - atrValue * 3;
+plot atrLow3 = lastClose - atrValue * atrLowerFactor3;
 atrLow3.SetDefaultColor(Color.DARK_RED);
 
-plot atrHigh1 = lastClose + atrValue;
+plot atrHigh1 = lastClose + atrValue * atrUpperFactor1;
 atrHigh1.SetDefaultColor(Color.LIGHT_GREEN);
-plot atrHigh2 = lastClose + atrValue * 2;
+plot atrHigh2 = lastClose + atrValue * atrUpperFactor2;
 atrHigh2.SetDefaultColor(Color.GREEN);
-plot atrHigh3 = lastClose + atrValue * 3;
+plot atrHigh3 = lastClose + atrValue * atrUpperFactor3;
 atrHigh3.SetDefaultColor(Color.DARK_GREEN);
 
 AddCloud(if showLowerAtr1Cloud then atrLow1 else Double.NaN,  atrLow2, showborder = yes, color1 = Color.LIGHT_ORANGE, color2 = Color.LIGHT_ORANGE);
