@@ -1,48 +1,86 @@
 #ATR Channels Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.2
+#Version: 0.3
 #Date Created: 11/15/2020
 
 #Show lines at + and - 1, 2, and 3 ATR above and below the close price of the previous candle to act as guides for stoploss risk or scalp exit points.  
 
 #Added Cloud Channels
+#Added support for ATR calculated on multiple time frames
 
+input ATRPriceAggregationPeriod = {default UseChartPeriod, MIN, TWO_MIN, THREE_MIN, FOUR_MIN, FIVE_MIN, TEN_MIN, FIFTEEN_MIN, TWENTY_MIN, THIRTY_MIN, HOUR, TWO_HOURS, FOUR_HOURS, DAY, TWO_DAYS, THREE_DAYS, FOUR_DAYS, WEEK, MONTH, OPT_EXP, QUARTER, YEAR};
 input ATRPeriod = 14;
+input averageType = AverageType.WILDERS;
 input offset = 1; #hint: which candle to start calculating ATR from (default is 1 for prevous candle)
 input showLowerAtr1Cloud = yes;
 input showLowerAtr2Cloud = yes;
 input showUpperAtr1Cloud = yes;
 input showUpperAtr2Cloud = yes;
 
-def lastClose = close[offset];
+def aggPrd;
+switch (ATRPriceAggregationPeriod) {
+    case MIN:
+        aggPrd = AggregationPeriod.MIN;
+    case TWO_MIN:
+        aggPrd = AggregationPeriod.TWO_MIN;
+    case THREE_MIN:
+        aggPrd = AggregationPeriod.THREE_MIN;
+    case FOUR_MIN:
+        aggPrd = AggregationPeriod.FOUR_MIN;
+    case FIVE_MIN:
+        aggPrd = AggregationPeriod.FIVE_MIN;
+    case TEN_MIN:
+        aggPrd = AggregationPeriod.TEN_MIN;
+    case FIFTEEN_MIN:
+        aggPrd = AggregationPeriod.FIFTEEN_MIN;
+    case TWENTY_MIN:
+        aggPrd = AggregationPeriod.TWENTY_MIN;
+    case THIRTY_MIN:
+        aggPrd = AggregationPeriod.THIRTY_MIN;
+    case HOUR:
+        aggPrd = AggregationPeriod.HOUR;
+    case TWO_HOURS:
+        aggPrd = AggregationPeriod.TWO_HOURS;
+    case FOUR_HOURS:
+        aggPrd = AggregationPeriod.FOUR_HOURS;
+    case DAY:
+        aggPrd = AggregationPeriod.DAY;
+    case TWO_DAYS:
+        aggPrd = AggregationPeriod.TWO_DAYS;
+    case THREE_DAYS:
+        aggPrd = AggregationPeriod.THREE_DAYS;
+    case FOUR_DAYS:
+        aggPrd = AggregationPeriod.FOUR_DAYS;
+    case WEEK:
+        aggPrd = AggregationPeriod.WEEK;
+    case MONTH:
+        aggPrd = AggregationPeriod.MONTH;
+    case OPT_EXP:
+        aggPrd = AggregationPeriod.OPT_EXP;
+    case QUARTER:
+        aggPrd = AggregationPeriod.QUARTER;
+    case YEAR:
+        aggPrd = AggregationPeriod.YEAR;
+    default:
+        aggPrd = GetAggregationPeriod();
+}
 
-def atrValue = ATR(length = ATRPeriod)[offset];
+def lastClose = close(period = aggPrd)[offset];
+def atrValue = MovingAverage(averageType, TrueRange(high(period = aggPrd), close(period = aggPrd), low(period = aggPrd)), ATRPeriod)[offset];
 
 plot atrLow1 = lastClose - atrValue;
-#atrLow1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 atrLow1.SetDefaultColor(Color.LIGHT_RED);
-#atrLow1.SetStyle(Curve.SHORT_DASH);
 plot atrLow2 = lastClose - atrValue * 2;
-#atrLow2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 atrLow2.SetDefaultColor(Color.RED);
-#atrLow2.SetStyle(Curve.SHORT_DASH);
 plot atrLow3 = lastClose - atrValue * 3;
-#atrLow3.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 atrLow3.SetDefaultColor(Color.DARK_RED);
-#atrLow3.SetStyle(Curve.SHORT_DASH);
 
 plot atrHigh1 = lastClose + atrValue;
-#atrHigh1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 atrHigh1.SetDefaultColor(Color.LIGHT_GREEN);
-#atrHigh1.SetStyle(Curve.SHORT_DASH);
 plot atrHigh2 = lastClose + atrValue * 2;
-#atrHigh2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 atrHigh2.SetDefaultColor(Color.GREEN);
-#atrHigh2.SetStyle(Curve.SHORT_DASH);
 plot atrHigh3 = lastClose + atrValue * 3;
-#atrHigh3.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 atrHigh3.SetDefaultColor(Color.DARK_GREEN);
-#atrHigh3.SetStyle(Curve.SHORT_DASH);
 
 AddCloud(if showLowerAtr1Cloud then atrLow1 else Double.NaN,  atrLow2, showborder = yes, color1 = Color.LIGHT_ORANGE, color2 = Color.LIGHT_ORANGE);
 AddCloud(if showLowerAtr2Cloud then atrLow2 else Double.NaN,  atrLow3, showborder = yes, color1 = Color.LIGHT_RED, color2 = Color.LIGHT_RED);
