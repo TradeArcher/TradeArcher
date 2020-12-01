@@ -1,0 +1,44 @@
+#ATR Channels Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/15/2020
+
+#Show lines at + and - 1, 2, and 3 ATR above and below the close price of the previous candle to act as guides for stoploss risk or scalp exit points.  
+
+input ATRPeriod = 14;
+
+def lastClose = close[1];
+
+def atrValue = ATR(length = ATRPeriod)[1];
+
+plot atrLow1 = lastClose - atrValue;
+#atrLow1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+atrLow1.SetDefaultColor(Color.WHITE);
+#atrLow1.SetStyle(Curve.SHORT_DASH);
+plot atrLow2 = lastClose - atrValue * 2;
+#atrLow2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+atrLow2.SetDefaultColor(Color.WHITE);
+#atrLow2.SetStyle(Curve.SHORT_DASH);
+plot atrLow3 = lastClose - atrValue * 3;
+#atrLow3.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+atrLow3.SetDefaultColor(Color.WHITE);
+#atrLow3.SetStyle(Curve.SHORT_DASH);
+
+plot atrHigh1 = lastClose + atrValue;
+#atrHigh1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+atrHigh1.SetDefaultColor(Color.WHITE);
+#atrHigh1.SetStyle(Curve.SHORT_DASH);
+plot atrHigh2 = lastClose + atrValue * 2;
+#atrHigh2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+atrHigh2.SetDefaultColor(Color.WHITE);
+#atrHigh2.SetStyle(Curve.SHORT_DASH);
+plot atrHigh3 = lastClose + atrValue * 3;
+#atrHigh3.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+atrHigh3.SetDefaultColor(Color.WHITE);
+#atrHigh3.SetStyle(Curve.SHORT_DASH);
+
+AddCloud(atrLow1,  atrLow2, showborder = yes, color1 = Color.LIGHT_ORANGE, color2 = Color.LIGHT_ORANGE);
+AddCloud(atrLow2,  atrLow3, showborder = yes, color1 = Color.LIGHT_RED, color2 = Color.LIGHT_RED);
+
+AddCloud(atrHigh1,  atrHigh2, showborder = yes, color1 = Color.LIGHT_GREEN, color2 = Color.LIGHT_GREEN);
+AddCloud(atrHigh2,  atrHigh3, showborder = yes, color1 = Color.LIME, color2 = Color.LIME);
