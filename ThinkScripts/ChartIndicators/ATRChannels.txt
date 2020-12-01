@@ -7,18 +7,17 @@
 
 #Added Cloud Channels
 #Added support for ATR calculated on multiple time frames
-#Added ATR factor customization inputs
 
 input ATRPriceAggregationPeriod = {default UseChartPeriod, MIN, TWO_MIN, THREE_MIN, FOUR_MIN, FIVE_MIN, TEN_MIN, FIFTEEN_MIN, TWENTY_MIN, THIRTY_MIN, HOUR, TWO_HOURS, FOUR_HOURS, DAY, TWO_DAYS, THREE_DAYS, FOUR_DAYS, WEEK, MONTH, OPT_EXP, QUARTER, YEAR};
 input ATRPeriod = 14;
 input averageType = AverageType.WILDERS;
 input offset = 1; #hint: which candle to start calculating ATR from (default is 1 for prevous candle)
-input atrUpperFactor1 = 1;
-input atrUpperFactor2 = 2;
-input atrUpperFactor3 = 3;
-input atrLowerFactor1 = 1;
-input atrLowerFactor2 = 2;
-input atrLowerFactor3 = 3;
+input atrUpperFactor1 = 1.0;
+input atrUpperFactor2 = 2.0;
+input atrUpperFactor3 = 3.0;
+input atrLowerFactor1 = 1.0;
+input atrLowerFactor2 = 2.0;
+input atrLowerFactor3 = 3.0;
 input showLowerAtr1Cloud = yes;
 input showLowerAtr2Cloud = yes;
 input showUpperAtr1Cloud = yes;
