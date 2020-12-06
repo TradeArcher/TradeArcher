@@ -1,10 +1,10 @@
 #Fibonacci Linear Regression Channel Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 11/19/2020
 
 input NumberOfFibonacciLines = {one, two, three, four, five, default six};
-input FullRange = yes;
+input StartingPoint = {default FullRange, MarketOpen, SetLength};
 input Length = 21;
 
 input FibExt1 = 0.236;
@@ -15,6 +15,28 @@ input FibExt5 = 0.786;
 input FibExt6 = 1.0;
 
 input UseCandleBodyForHL = yes;
+
+def isRollover = GetYYYYMMDD() != GetYYYYMMDD()[1];
+
+def beforeStart = GetTime() < RegularTradingStart(GetYYYYMMDD());
+
+def afterEnd = GetTime() > RegularTradingEnd(GetYYYYMMDD());
+
+def isFirstBarOfDay = if (beforeStart[1] == 1 and beforeStart == 0) or (isRollover and beforeStart == 0) then 1 else 0;
+
+def firstBarOfDay = if(isFirstBarOfDay, BarNumber(), firstBarOfDay[1]);
+
+def isAfterPremarket = if(BarNumber() >= firstBarOfDay, yes, no);
+
+#def lastBarOnChart = fold bNum = 0 to 24*60 while !IsNaN(GetValue(close, -bNum)) do GetValue(BarNumber(), -bNum);
+def lastBarOnChart;
+if (isAfterPremarket) {
+    lastBarOnChart = (fold bNum = 0 to 1440 while !IsNaN(GetValue(close, -bNum)) do GetValue(BarNumber(), -bNum));
+} else {
+    lastBarOnChart = 0;
+}
+#def lastBarOnChartClosePrice = fold cNum = 0 to Double.POSITIVE_INFINITY while !IsNaN(GetValue(close, cNum)) do GetValue(close, cNum);
+#def lastBarOnChartClosePrice = GetValue(close, lastBarOnChart);
 
 def lineCount;
 
@@ -33,14 +55,98 @@ switch (numberOfFibonacciLines) {
         lineCount = 6;
 }
 
+script LR {
+    input y1 = close;
+    input lastBar = 776;
+    input firstBar = 188;
+    def isAfterPremarket1 = if(BarNumber() >= firstBar, yes, no);
+    def n1 = lastBar - firstBar;
+    def x1 = x1[1] + 1;
+
+    def sumx1y1;
+    if (isAfterPremarket1 and lastBar > 0) {
+        sumx1y1 = (fold ixXY = 0 to n1 with totalXY = 0 do totalXY + (GetValue(x1, ixXY)*GetValue(y1, ixXY)));
+    } else {
+        sumx1y1 = 1;
+    }
+
+    def sumx1;
+    if (isAfterPremarket1 and lastBar > 0) {
+        sumx1 = (fold ixX = 0 to n1 with totalX = 0 do totalX + (GetValue(x1, ixX)));
+    } else {
+        sumx1 = 1;
+    }
+
+    def sumy1;
+    if (isAfterPremarket1 and lastBar > 0) {
+        sumy1 = (fold ixY = 0 to n1 with totalY = 0 do totalY + (GetValue(y1, ixY)));
+    } else {
+        sumy1 = 1;
+    }
+
+    def sumSqrx1;
+    if (isAfterPremarket1 and lastBar > 0) {
+        sumSqrx1 = (fold ixSqrX = 0 to n1 with totalSqrX = 0 do totalSqrX + (GetValue(Sqr(x1), ixSqrX)));
+    } else {
+        sumSqrx1 = 1;
+    }
+    
+    def a1 = (n1 * sumx1y1 - sumx1 * sumy1 ) /
+            (n1 * sumSqrx1 - Sqr(sumx1));
+    
+    def b1 = (sumSqrx1 * sumy1 - sumx1 * sumx1y1 ) /
+            (n1 * sumSqrx1 - Sqr(sumx1));
+
+    plot InertiaTS = GetValue(a1, n1) * GetValue(x1, n1) + GetValue(b1, n1);
+    plot lboc = lastBar;
+    plot yIntercept = GetValue(b1, -n1);
+    plot slope = GetValue(a1, -n1);    
+}
+
+def yIntercept1;
+def slopeM;
+def linRegLine;
+
+plot linReg;
+switch (StartingPoint) {
+    case FullRange:
+        yIntercept1 = Double.NaN;
+        slopeM = Double.NaN;
+        linRegLine = Double.NaN;
+        linReg = InertiaAll(data = close);
+    case MarketOpen:
+        yIntercept1 = 
+            if BarNumber() == firstBarOfDay 
+            then LR(close, lastBarOnChart, firstBarOfDay).yIntercept 
+            else yIntercept1[1];
+        slopeM = 
+            if BarNumber() == firstBarOfDay 
+            then LR(close, lastBarOnChart, firstBarOfDay).slope 
+            else slopeM[1];
+        linRegLine = 
+            if BarNumber() == firstBarOfDay 
+            then yIntercept1 
+            else linRegLine[1] - slopeM;
+        linReg = if(!beforeStart, linRegLine, Double.NaN);
+    case SetLength:
+        yIntercept1 = Double.NaN;
+        slopeM = Double.NaN;
+        linRegLine = Double.NaN;
+        linReg = InertiaAll(close, length);
+}
+
+
+        AddChartBubble(beforeStart, high, "yes");
+
+linReg.SetDefaultColor(color = Color.BLUE);
+
 def highValue = if(UseCandleBodyForHL, if(close > open, close, open), high);
 def lowValue = if(UseCandleBodyForHL, if(open < close, open, close), low);
 
 def highOfPeriod = HighestAll(highValue);
 def lowOfPeriod = LowestAll(lowValue);
 
-plot linReg = LinearRegChVar("full range" = fullRange, length = length, "width of channel" = 0.0);
-linReg.SetDefaultColor(color = Color.BLUE);
+def currentDay = GetYYYYMMDD();
 
 def fibWidth = (highOfPeriod - lowofPeriod) / 2;
 
