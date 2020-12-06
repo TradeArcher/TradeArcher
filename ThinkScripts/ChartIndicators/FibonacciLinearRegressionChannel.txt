@@ -135,9 +135,6 @@ switch (StartingPoint) {
         linReg = InertiaAll(close, length);
 }
 
-
-        AddChartBubble(beforeStart, high, "yes");
-
 linReg.SetDefaultColor(color = Color.BLUE);
 
 def highValue = if(UseCandleBodyForHL, if(close > open, close, open), high);
