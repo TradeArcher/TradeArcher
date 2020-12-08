@@ -1,0 +1,134 @@
+#Advanced VWAP Lines Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 12/07/2020
+
+input LineCalculation = {default Fibonacci, StandardDeviation};
+input NumberOfFibonacciLines = {one, two, three, four, five, default six};
+
+input FibExt1 = 0.236;
+input FibExt2 = 0.382;
+input FibExt3 = 0.5;
+input FibExt4 = 0.618;
+input FibExt5 = 0.786;
+input FibExt6 = 1.0;
+
+def useStdDev;
+switch (LineCalculation) {
+    case StandardDeviation:
+        useStdDev = yes;
+    default:
+        useStdDev = no;
+}
+
+def sd = StDevAll(data = CLOSE);
+
+input UseCandleBodyForHL = yes;
+
+def lineCount;
+
+switch (numberOfFibonacciLines) {
+    case one:
+        lineCount = 1;
+    case two:
+        lineCount = 2;
+    case three:
+        lineCount = 3;
+    case four:
+        lineCount = 4;
+    case five:
+        lineCount = 5;
+    case six:
+        lineCount = 6;
+}
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR 
+else 
+    if currentAggPeriod >= AggregationPeriod.QUARTER   
+    then AggregationPeriod.YEAR
+    else 
+    if currentAggPeriod >= AggregationPeriod.MONTH  
+    then AggregationPeriod.QUARTER 
+    else 
+    if currentAggPeriod >= AggregationPeriod.WEEK 
+    then AggregationPeriod.MONTH
+    else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.WEEK 
+    else  AggregationPeriod.DAY;
+
+AddLabel(yes, sd);
+
+def cumulativePeriod = BarNumber();
+
+def typicalPrice = (high + low + close) / 3;
+def typicalPriceVolume = typicalPrice * volume;
+
+def cumulativeTypicalPriceVolume = fold typicalPriceVolumeIx = 0 to cumulativePeriod with typicalPriceVolumeTotal = 0 do typicalPriceVolumeTotal + getValue(typicalPriceVolume, typicalPriceVolumeIx);
+def cumulativeVolume = fold volumeIx = 0 to cumulativePeriod with volumeTotal = 0 do volumeTotal + getValue(volume, volumeIx);
+plot linReg = cumulativeTypicalPriceVolume / cumulativeVolume;
+
+linReg.SetDefaultColor(color = Color.BLUE);
+
+def highValue = if(UseCandleBodyForHL, if(close > open, close, open), high);
+def lowValue = if(UseCandleBodyForHL, if(open < close, open, close), low);
+
+def highOfPeriod = HighestAll(highValue);
+def lowOfPeriod = LowestAll(lowValue);
+
+def currentDay = GetYYYYMMDD();
+
+#def upperFibWidth = (highOfPeriod - linReg);
+#def lowerFibWidth = (linReg - lowofPeriod);
+def upperFibWidth = (highOfPeriod - lowofPeriod) / 4;
+def lowerFibWidth = (highOfPeriod - lowofPeriod) / 4;
+
+plot lineRegFib1Up = linReg + upperFibWidth * sd*fibExt1;
+lineRegFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
+
+plot lineRegFib1Down = linReg - lowerFibWidth * sd*fibExt1;
+lineRegFib1Down.SetDefaultColor(color = Color.DARK_ORANGE);
+
+plot lineRegFib2Up = linReg + upperFibWidth * sd*fibExt2;
+lineRegFib2Up.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Up.SetHiding(lineCount < 2);
+
+plot lineRegFib2Down = linReg - lowerFibWidth * sd*fibExt2;
+lineRegFib2Down.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Down.SetHiding(lineCount < 2);
+
+plot lineRegFib3Up = linReg + upperFibWidth * sd*fibExt3;
+lineRegFib3Up.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Up.SetHiding(lineCount < 3);
+
+plot lineRegFib3Down = linReg - lowerFibWidth * sd*fibExt3;
+lineRegFib3Down.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Down.SetHiding(lineCount < 3);
+
+plot lineRegFib4Up = linReg + upperFibWidth * sd*fibExt4;
+lineRegFib4Up.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Up.SetHiding(lineCount < 4);
+
+plot lineRegFib4Down = linReg - lowerFibWidth * sd*fibExt4;
+lineRegFib4Down.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Down.SetHiding(lineCount < 4);
+
+plot lineRegFib5Up = linReg + upperFibWidth * sd*fibExt5;
+lineRegFib5Up.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5Up.SetHiding(lineCount < 5);
+
+plot lineRegFib5Down = linReg - lowerFibWidth * sd*fibExt5;
+lineRegFib5Down.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5Down.SetHiding(lineCount < 5);
+
+plot lineRegFib6Up = linReg + upperFibWidth * sd*fibExt6;
+lineRegFib6Up.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6Up.SetHiding(lineCount < 6);
+
+plot lineRegFib6Down = linReg - lowerFibWidth * sd*fibExt6;
+lineRegFib6Down.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6Down.SetHiding(lineCount < 6);
+
