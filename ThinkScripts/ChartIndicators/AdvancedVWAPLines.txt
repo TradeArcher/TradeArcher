@@ -1,6 +1,6 @@
 #Advanced VWAP Lines Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 12/07/2020
 
 input LineCalculation = {default Fibonacci, StandardDeviation};
@@ -21,7 +21,7 @@ switch (LineCalculation) {
         useStdDev = no;
 }
 
-def sd = StDevAll(data = CLOSE);
+def sd = if(useStdDev, StDevAll(data = CLOSE), 1);
 
 input UseCandleBodyForHL = yes;
 
@@ -60,8 +60,6 @@ else
     then AggregationPeriod.WEEK 
     else  AggregationPeriod.DAY;
 
-AddLabel(yes, sd);
-
 def cumulativePeriod = BarNumber();
 
 def typicalPrice = (high + low + close) / 3;
@@ -83,8 +81,8 @@ def currentDay = GetYYYYMMDD();
 
 #def upperFibWidth = (highOfPeriod - linReg);
 #def lowerFibWidth = (linReg - lowofPeriod);
-def upperFibWidth = (highOfPeriod - lowofPeriod) / 4;
-def lowerFibWidth = (highOfPeriod - lowofPeriod) / 4;
+def upperFibWidth = (highOfPeriod - lowofPeriod) / 2;
+def lowerFibWidth = (highOfPeriod - lowofPeriod) / 2;
 
 plot lineRegFib1Up = linReg + upperFibWidth * sd*fibExt1;
 lineRegFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
@@ -131,4 +129,5 @@ lineRegFib6Up.SetHiding(lineCount < 6);
 plot lineRegFib6Down = linReg - lowerFibWidth * sd*fibExt6;
 lineRegFib6Down.SetDefaultColor(color = Color.VIOLET);
 lineRegFib6Down.SetHiding(lineCount < 6);
+
 
