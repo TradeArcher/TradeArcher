@@ -1,9 +1,9 @@
 #Advanced VWAP Lines Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.2
+#Version: 0.3
 #Date Created: 12/07/2020
 
-input LineCalculation = {default Fibonacci, StandardDeviation};
+input LineCalculation = {default Fibonacci, StandardDeviation, StandardError};
 input NumberOfFibonacciLines = {one, two, three, four, five, default six};
 
 input FibExt1 = 0.236;
@@ -13,15 +13,15 @@ input FibExt4 = 0.618;
 input FibExt5 = 0.786;
 input FibExt6 = 1.0;
 
-def useStdDev;
+def sd;
 switch (LineCalculation) {
     case StandardDeviation:
-        useStdDev = yes;
+        sd = StdevAll(data = CLOSE);
+    case StandardError:
+        sd = StErrAll(data = CLOSE);
     default:
-        useStdDev = no;
+        sd = 1;
 }
-
-def sd = if(useStdDev, StDevAll(data = CLOSE), 1);
 
 input UseCandleBodyForHL = yes;
 
@@ -129,5 +129,4 @@ lineRegFib6Up.SetHiding(lineCount < 6);
 plot lineRegFib6Down = linReg - lowerFibWidth * sd*fibExt6;
 lineRegFib6Down.SetDefaultColor(color = Color.VIOLET);
 lineRegFib6Down.SetHiding(lineCount < 6);
-
 
