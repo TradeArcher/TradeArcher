@@ -4,7 +4,9 @@
 #Date Created: 12/07/2020
 
 input LineCalculation = {default Fibonacci, StandardDeviation, StandardError};
+input UpperLowerCalculation = {default HighLow, ATR};
 input NumberOfFibonacciLines = {one, two, three, four, five, default six};
+input ATRLength = 14;
 
 input FibExt1 = 0.236;
 input FibExt2 = 0.382;
@@ -60,29 +62,121 @@ else
     then AggregationPeriod.WEEK 
     else  AggregationPeriod.DAY;
 
-def cumulativePeriod = BarNumber();
+#def cumulativePeriod = BarNumber();
 
-def typicalPrice = (high + low + close) / 3;
-def typicalPriceVolume = typicalPrice * volume;
+#def typicalPrice = (high + low + close) / 3;
+#def typicalPriceVolume = typicalPrice * volume;
 
-def cumulativeTypicalPriceVolume = fold typicalPriceVolumeIx = 0 to cumulativePeriod with typicalPriceVolumeTotal = 0 do typicalPriceVolumeTotal + getValue(typicalPriceVolume, typicalPriceVolumeIx);
-def cumulativeVolume = fold volumeIx = 0 to cumulativePeriod with volumeTotal = 0 do volumeTotal + getValue(volume, volumeIx);
-plot linReg = cumulativeTypicalPriceVolume / cumulativeVolume;
+#def cumulativeTypicalPriceVolume = fold typicalPriceVolumeIx = 0 to cumulativePeriod with typicalPriceVolumeTotal = 0 do typicalPriceVolumeTotal + getValue(typicalPriceVolume, typicalPriceVolumeIx);
+#def cumulativeVolume = fold volumeIx = 0 to cumulativePeriod with volumeTotal = 0 do volumeTotal + getValue(volume, volumeIx);
+#plot linReg = cumulativeTypicalPriceVolume / cumulativeVolume;
+
+#linReg.SetDefaultColor(color = Color.BLUE);
+
+#BEGIN VWAP code
+input timeFrame = {default DAY, WEEK, MONTH};
+
+def cap = getAggregationPeriod();
+def errorInAggregation =
+    timeFrame == timeFrame.DAY and cap >= AggregationPeriod.WEEK or
+    timeFrame == timeFrame.WEEK and cap >= AggregationPeriod.MONTH;
+assert(!errorInAggregation, "timeFrame should be not less than current chart aggregation period");
+
+def yyyyMmDd = getYyyyMmDd();
+def periodIndx;
+switch (timeFrame) {
+case DAY:
+    periodIndx = yyyyMmDd;
+case WEEK:
+    periodIndx = Floor((daysFromDate(first(yyyyMmDd)) + getDayOfWeek(first(yyyyMmDd))) / 7);
+case MONTH:
+    periodIndx = roundDown(yyyyMmDd / 100, 0);
+}
+def isPeriodRolled = compoundValue(1, periodIndx != periodIndx[1], yes);
+
+def volumeSum;
+def volumeVwapSum;
+def volumeVwap2Sum;
+
+if (isPeriodRolled) {
+    volumeSum = volume;
+    volumeVwapSum = volume * vwap;
+    volumeVwap2Sum = volume * Sqr(vwap);
+} else {
+    volumeSum = compoundValue(1, volumeSum[1] + volume, volume);
+    volumeVwapSum = compoundValue(1, volumeVwapSum[1] + volume * vwap, volume * vwap);
+    volumeVwap2Sum = compoundValue(1, volumeVwap2Sum[1] + volume * Sqr(vwap), volume * Sqr(vwap));
+}
+def price = volumeVwapSum / volumeSum;
+def deviation = Sqrt(Max(volumeVwap2Sum / volumeSum - Sqr(price), 0));
+
+#plot VWAP = price;
+plot linReg = price;
 
 linReg.SetDefaultColor(color = Color.BLUE);
+#END VWAP code
 
 def highValue = if(UseCandleBodyForHL, if(close > open, close, open), high);
 def lowValue = if(UseCandleBodyForHL, if(open < close, open, close), low);
 
+
+#TODO: use a fold to calculate then True RangeBands according to these rules:
+#The Average True Range (ATR) study calculates the average true price range over a time period. True range is the greatest of the following:
+
+# * the difference between the current high and the current low
+# * the difference between the current high and the previous close
+# * the difference between the previous close and the current low
+
+#By default, the average true range is a 14-period Wilder's moving average of this value; both the period and the type of moving average can be customized using the study input parameters.
+
+#def atrValue = MovingAverage(aggPeriodType, TrueRange(high(period = aggPeriodType)[1], close(period = aggPeriodType)[1], low(period = aggPeriodType)[1]), ATRLength) / 2;
+#def atrValue = TrueRange(high(period = aggPeriodType)[1], close(period = aggPeriodType)[1], low(period = aggPeriodType)[1]);
+
+def h = high(period = aggPeriodType);
+def l = low(period = aggPeriodType);
+def c = close(period = aggPeriodType);
+def trueRange = TrueRange(h, c, l);
+
+def avgTrueRange = (fold atrIndex = 0 to ATRLength with sumOfTrueRanges = 0 do sumOfTrueRanges + GetValue(trueRange, atrIndex)) / ATRLength;
+
+#def atrValue = MovingAverage(ATRAverageType, GetValue(trueRange, "dynamic offset" = 1), ATRLength);
+
+#AddLabel(yes, "hv: " + highValue + " | lv: " + lowValue);
+
+#AddLabel(yes, "atrValue: " + avgTrueRange);
+
 def highOfPeriod = HighestAll(highValue);
 def lowOfPeriod = LowestAll(lowValue);
 
-def currentDay = GetYYYYMMDD();
-
 #def upperFibWidth = (highOfPeriod - linReg);
 #def lowerFibWidth = (linReg - lowofPeriod);
-def upperFibWidth = (highOfPeriod - lowofPeriod) / 2;
-def lowerFibWidth = (highOfPeriod - lowofPeriod) / 2;
+def upperFibWidth;
+def lowerFibWidth;
+
+switch (UpperLowerCalculation) {
+    case ATR:
+        upperFibWidth = avgTrueRange / 2;
+        lowerFibWidth = avgTrueRange / 2;
+    default:
+        upperFibWidth = (highOfPeriod - lowofPeriod) / 2;
+        lowerFibWidth = (highOfPeriod - lowofPeriod) / 2;
+}
+
+input PrevDayVWAPLevel = {default EOD, MarketClose};
+
+def isWithinTradingHours = If (cap >= AggregationPeriod.DAY, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+def lastCandle = (isWithinTradingHours[0] and !isWithinTradingHours[-1]);
+def vwapAtEndOfPrevDay;
+switch (PrevDayVWAPLevel) {
+    case EOD:
+        vwapAtEndOfPrevDay = if(isPeriodRolled, linReg[1], vwapAtEndOfPrevDay[1]);
+    case MarketClose:
+        vwapAtEndOfPrevDay = if(lastCandle, linReg, vwapAtEndOfPrevDay[1]);
+}
+
+plot vwapAtEndOfPrevDayLine = vwapAtEndOfPrevDay;
+vwapAtEndOfPrevDayLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOfPrevDayLine.SetStyle(Curve.LONG_DASH );
 
 plot lineRegFib1Up = linReg + upperFibWidth * sd*fibExt1;
 lineRegFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
@@ -130,3 +224,62 @@ plot lineRegFib6Down = linReg - lowerFibWidth * sd*fibExt6;
 lineRegFib6Down.SetDefaultColor(color = Color.VIOLET);
 lineRegFib6Down.SetHiding(lineCount < 6);
 
+
+#VWAP Levels at end of prevous day
+plot lineRegFib1UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd*fibExt1;
+lineRegFib1UpPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1UpPrevDay.SetStyle(Curve.LONG_DASH );
+
+plot lineRegFib1DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd*fibExt1;
+lineRegFib1DownPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1DownPrevDay.SetStyle(Curve.LONG_DASH );
+
+plot lineRegFib2UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd*fibExt2;
+lineRegFib2UpPrevDay.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2UpPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib2UpPrevDay.SetHiding(lineCount < 2);
+
+plot lineRegFib2DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd*fibExt2;
+lineRegFib2DownPrevDay.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2DownPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib2DownPrevDay.SetHiding(lineCount < 2);
+
+plot lineRegFib3UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd*fibExt3;
+lineRegFib3UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3UpPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib3UpPrevDay.SetHiding(lineCount < 3);
+
+plot lineRegFib3DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd*fibExt3;
+lineRegFib3DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3DownPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib3DownPrevDay.SetHiding(lineCount < 3);
+
+plot lineRegFib4UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd*fibExt4;
+lineRegFib4UpPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4UpPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib4UpPrevDay.SetHiding(lineCount < 4);
+
+plot lineRegFib4DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd*fibExt4;
+lineRegFib4DownPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4DownPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib4DownPrevDay.SetHiding(lineCount < 4);
+
+plot lineRegFib5UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd*fibExt5;
+lineRegFib5UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5UpPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib5UpPrevDay.SetHiding(lineCount < 5);
+
+plot lineRegFib5DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd*fibExt5;
+lineRegFib5DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5DownPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib5DownPrevDay.SetHiding(lineCount < 5);
+
+plot lineRegFib6UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd*fibExt6;
+lineRegFib6UpPrevDay.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6UpPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib6UpPrevDay.SetHiding(lineCount < 6);
+
+plot lineRegFib6DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd*fibExt6;
+lineRegFib6DownPrevDay.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6DownPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib6DownPrevDay.SetHiding(lineCount < 6);
