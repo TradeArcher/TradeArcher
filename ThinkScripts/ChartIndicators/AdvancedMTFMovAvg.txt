@@ -8,7 +8,8 @@ input PriceType = {default Close, Open, High, Low};
 input TimeFrame = {default CURRENT, MIN, TWOMIN, THREEMIN, FOURMIN, FIVEMIN, TENMIN, FIFTEENMIN, TWENTYMIN, THIRTYMIN, HOUR, TWOHOURS, THREEHOURS, FOURHOURS, DAY, TWODAYS, THREEDAYS, FOURDAYS, WEEK, MONTH, QUARTER, YEAR};
 input Length = 26;
 input Displace = 0;
-input PricePercentAboveMA = 20;
+input PricePercentAboveMA = 20.0;
+input PricePercentBelowMA = 20.0;
 input ShowSignals = no;
 
 def aggPeriod;
@@ -98,18 +99,24 @@ switch (PriceType) {
         currentPrice = low;
 }
 
-def percentAboveMA = ((currentPrice - ma) / ma) * 100;
+def priceMAPercentDifference = ((currentPrice - ma) / ma) * 100;
 
-def isSignalLine = (percentAboveMA >= PricePercentAboveMA);
+def isAboveSignalLine = (priceMAPercentDifference >= PricePercentAboveMA);
+def isBelowSignalLine = (-priceMAPercentDifference >= PricePercentBelowMA);
 
 #define colors: {default BLUE, MAGENTA, CYAN, PINK, LIGHT_GRAY, ORANGE, RED, GREEN, LIGHT_GREEN, GRAY, WHITE, YELLOW, LIME};
 plot movingAvg = ma;
 movingAvg.DefineColor("Normal", COLOR.BLUE);
-movingAvg.DefineColor("Signal", COLOR.LIME);
+movingAvg.DefineColor("AboveSignal", COLOR.LIGHT_RED);
+movingAvg.DefineColor("BelowSignal", COLOR.LIME);
 #movingAvg.Sethiding(!(percentAboveMA >= PricePercentAboveMA));
-movingAvg.AssignValueColor(color = (if percentAboveMA >= PricePercentAboveMA then movingAvg.Color("Signal") else movingAvg.Color("Normal")));
+movingAvg.AssignValueColor(color = (if isAboveSignalLine then movingAvg.Color("AboveSignal") else if isBelowSignalLine then movingAvg.Color("BelowSignal") else movingAvg.Color("Normal")));
 #movingAvg.enableApproximation();
 
-plot signal = if(ShowSignals, isSignalLine, no);
-signal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_WEDGE_DOWN);
-#signal.SetDefaultColor(GetColor(LineSignalColor));
+plot aboveSignal = if(ShowSignals, isAboveSignalLine, no);
+aboveSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_WEDGE_DOWN);
+aboveSignal.SetDefaultColor(COLOR.LIGHT_RED);
+
+plot belowSignal = if(ShowSignals, isBelowSignalLine, no);
+belowSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_WEDGE_UP);
+belowSignal.SetDefaultColor(COLOR.LIME);
