@@ -1,6 +1,6 @@
 #Advanced VWAP Lines Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.4
+#Version: 0.5
 #Date Created: 12/07/2020
 
 input LineCalculation = {default Fibonacci, StandardDeviation, StandardError};
@@ -98,7 +98,15 @@ if (isPeriodRolled) {
     volumeVwap2Sum = CompoundValue(1, volumeVwap2Sum[1] + volume * Sqr(vwap), volume * Sqr(vwap));
 }
 def price = volumeVwapSum / volumeSum;
-def deviation = Sqrt(Max(volumeVwap2Sum / volumeSum - Sqr(price), 0));
+
+#TODO: Add input options to anchor VWAP to Date/Time, HOD, LOD, HODLODGreaterVolume, RecentHigh, RecentLow, RecentVolumeSpike
+#def price = TotalSum(if postAnchorDate and postAnchorTime then ((high+low+close)/3)*(volume) else 0)/TotalSum(if postAnchorDate and postAnchorTime then volume else 0);
+#def price = TotalSum(((high+low+close)/3)*(volume))/TotalSum(volume);
+
+#plot customVWAPLine = customVWAP;
+#customVWAPLine.SetStyle(Curve.FIRM);
+#customVWAPLine.SetLineWeight(3);
+#customVWAPLine.SetDefaultColor(Color.GREEN);
 
 input volumeLength = 20;
 input volumeLineWeight2 = 33;
@@ -121,6 +129,7 @@ plot linReg = price;
 
 #Use volume increase levels to change VWAP line color 
 linReg.AssignValueColor(color = (if volume >= volLevel5IncLevel then Color.RED else if volume >= volLevel4IncLevel then Color.ORANGE else if volume >= volLevel3IncLevel then Color.LIGHT_ORANGE else if volume >= volLevel2IncLevel then Color.YELLOW else Color.BLUE));
+linReg.SetStyle(Curve.FIRM);
 linReg.SetLineWeight(2);
 #linReg.SetLineWeight((if volume >= volLevel5IncLevel then 5 else if volume >= volLevel4IncLevel then 4 else if volume >= volLevel3IncLevel then 3 else if volume >= volLevel2IncLevel then 2 else 1));
 #END VWAP code
