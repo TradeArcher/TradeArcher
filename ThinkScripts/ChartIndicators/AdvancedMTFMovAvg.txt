@@ -1,4 +1,4 @@
-#Advanced Multi-Timeframe Moving Average Chart Indicator
+#Advanced Multiple Timeframe Moving Average Chart Indicator
 #Author: TradeArcher2020
 #Version: 0.1
 #Date Created: 12/13/2020
