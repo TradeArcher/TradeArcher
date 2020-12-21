@@ -1,11 +1,20 @@
 #Advanced VWAP Lines Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.5
+#Version: 0.6
 #Date Created: 12/07/2020
 
 input LineCalculation = {default Fibonacci, StandardDeviation, StandardError};
 input UpperLowerCalculation = {default HighLow, ATR};
 input NumberOfFibonacciLines = {one, two, three, four, five, default six};
+input HideYesterday = no;
+input HideTwoDaysAgo = no;
+input HideThreeDaysAgo = yes;
+input HideFourDaysAgo = yes;
+input HideWeek = yes;
+input HideLastWeek = yes;
+input HideMonth = yes;
+input HideQuarter = yes;
+
 input ATRLength = 14;
 
 input FibExt1 = 0.236;
@@ -193,17 +202,6 @@ input PrevDayVWAPLevel = {default EOD, MarketClose};
 
 def isWithinTradingHours = If (cap >= AggregationPeriod.DAY, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
 def lastCandle = (isWithinTradingHours[0] and !isWithinTradingHours[-1]);
-def vwapAtEndOfPrevDay;
-switch (PrevDayVWAPLevel) {
-case EOD:
-    vwapAtEndOfPrevDay = If(isPeriodRolled, linReg[1], vwapAtEndOfPrevDay[1]);
-case MarketClose:
-    vwapAtEndOfPrevDay = If(lastCandle, linReg, vwapAtEndOfPrevDay[1]);
-}
-
-plot vwapAtEndOfPrevDayLine = vwapAtEndOfPrevDay;
-vwapAtEndOfPrevDayLine.SetDefaultColor(color = Color.BLUE);
-vwapAtEndOfPrevDayLine.SetStyle(Curve.LONG_DASH );
 
 plot lineRegFib1Up = linReg + upperFibWidth * sd * FibExt1;
 lineRegFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
@@ -251,62 +249,219 @@ plot lineRegFib6Down = linReg - lowerFibWidth * sd * FibExt6;
 lineRegFib6Down.SetDefaultColor(color = Color.VIOLET);
 lineRegFib6Down.SetHiding(lineCount < 6);
 
+def dailyVWAP = vwap(period = AggregationPeriod.DAY);
+
+
+
 
 #VWAP Levels at end of prevous day
+def vwapAtEndOfPrevDay = dailyVWAP[1];
+
+
+plot vwapAtEndOfPrevDayLine = vwapAtEndOfPrevDay;
+vwapAtEndOfPrevDayLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOfPrevDayLine.SetStyle(Curve.LONG_DASH );
+vwapAtEndOfPrevDayLine.SetHiding(HideYesterday);
+
 plot lineRegFib1UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt1;
 lineRegFib1UpPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
 lineRegFib1UpPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib1UpPrevDay.SetHiding(HideYesterday);
 
 plot lineRegFib1DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt1;
 lineRegFib1DownPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
 lineRegFib1DownPrevDay.SetStyle(Curve.LONG_DASH );
+lineRegFib1DownPrevDay.SetHiding(HideYesterday);
 
 plot lineRegFib2UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt2;
 lineRegFib2UpPrevDay.SetDefaultColor(color = Color.DARK_RED);
 lineRegFib2UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib2UpPrevDay.SetHiding(lineCount < 2);
+lineRegFib2UpPrevDay.SetHiding(lineCount < 2 or HideYesterday);
 
 plot lineRegFib2DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt2;
 lineRegFib2DownPrevDay.SetDefaultColor(color = Color.DARK_RED);
 lineRegFib2DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib2DownPrevDay.SetHiding(lineCount < 2);
+lineRegFib2DownPrevDay.SetHiding(lineCount < 2 or HideYesterday);
 
 plot lineRegFib3UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt3;
 lineRegFib3UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
 lineRegFib3UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib3UpPrevDay.SetHiding(lineCount < 3);
+lineRegFib3UpPrevDay.SetHiding(lineCount < 3 or HideYesterday);
 
 plot lineRegFib3DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt3;
 lineRegFib3DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
 lineRegFib3DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib3DownPrevDay.SetHiding(lineCount < 3);
+lineRegFib3DownPrevDay.SetHiding(lineCount < 3 or HideYesterday);
 
 plot lineRegFib4UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt4;
 lineRegFib4UpPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
 lineRegFib4UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib4UpPrevDay.SetHiding(lineCount < 4);
+lineRegFib4UpPrevDay.SetHiding(lineCount < 4 or HideYesterday);
 
 plot lineRegFib4DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt4;
 lineRegFib4DownPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
 lineRegFib4DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib4DownPrevDay.SetHiding(lineCount < 4);
+lineRegFib4DownPrevDay.SetHiding(lineCount < 4 or HideYesterday);
 
 plot lineRegFib5UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt5;
 lineRegFib5UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
 lineRegFib5UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib5UpPrevDay.SetHiding(lineCount < 5);
+lineRegFib5UpPrevDay.SetHiding(lineCount < 5 or HideYesterday);
 
 plot lineRegFib5DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt5;
 lineRegFib5DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
 lineRegFib5DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib5DownPrevDay.SetHiding(lineCount < 5);
+lineRegFib5DownPrevDay.SetHiding(lineCount < 5 or HideYesterday);
 
 plot lineRegFib6UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt6;
 lineRegFib6UpPrevDay.SetDefaultColor(color = Color.VIOLET);
 lineRegFib6UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib6UpPrevDay.SetHiding(lineCount < 6);
+lineRegFib6UpPrevDay.SetHiding(lineCount < 6 or HideYesterday);
 
 plot lineRegFib6DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt6;
 lineRegFib6DownPrevDay.SetDefaultColor(color = Color.VIOLET);
 lineRegFib6DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib6DownPrevDay.SetHiding(lineCount < 6);
+lineRegFib6DownPrevDay.SetHiding(lineCount < 6 or HideYesterday);
+
+
+
+
+#VWAP Levels at end of 2 days ago
+def vwapAtEndOf2DaysAgo = dailyVWAP[2];
+
+plot vwapAtEndOf2DaysAgoLine = vwapAtEndOf2DaysAgo;
+vwapAtEndOf2DaysAgoLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOf2DaysAgoLine.SetStyle(Curve.MEDIUM_DASH );
+vwapAtEndOf2DaysAgoLine.SetHiding(HideTwoDaysAgo);
+
+plot lineRegFib1Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt1;
+lineRegFib1Up2DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib1Up2DaysAgo.SetHiding(HideTwoDaysAgo);
+
+plot lineRegFib1Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt1;
+lineRegFib1Down2DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib1Down2DaysAgo.SetHiding(HideTwoDaysAgo);
+
+plot lineRegFib2Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt2;
+lineRegFib2Up2DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib2Up2DaysAgo.SetHiding(lineCount < 2 or HideTwoDaysAgo);
+
+plot lineRegFib2Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt2;
+lineRegFib2Down2DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib2Down2DaysAgo.SetHiding(lineCount < 2 or HideTwoDaysAgo);
+
+plot lineRegFib3Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt3;
+lineRegFib3Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib3Up2DaysAgo.SetHiding(lineCount < 3 or HideTwoDaysAgo);
+
+plot lineRegFib3Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt3;
+lineRegFib3Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib3Down2DaysAgo.SetHiding(lineCount < 3 or HideTwoDaysAgo);
+
+plot lineRegFib4Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt4;
+lineRegFib4Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib4Up2DaysAgo.SetHiding(lineCount < 4 or HideTwoDaysAgo);
+
+plot lineRegFib4Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt4;
+lineRegFib4Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib4Down2DaysAgo.SetHiding(lineCount < 4 or HideTwoDaysAgo);
+
+plot lineRegFib5Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt5;
+lineRegFib5Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib5Up2DaysAgo.SetHiding(lineCount < 5 or HideTwoDaysAgo);
+
+plot lineRegFib5Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt5;
+lineRegFib5Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib5Down2DaysAgo.SetHiding(lineCount < 5 or HideTwoDaysAgo);
+
+plot lineRegFib6Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt6;
+lineRegFib6Up2DaysAgo.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib6Up2DaysAgo.SetHiding(lineCount < 6 or HideTwoDaysAgo);
+
+plot lineRegFib6Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt6;
+lineRegFib6Down2DaysAgo.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+lineRegFib6Down2DaysAgo.SetHiding(lineCount < 6 or HideTwoDaysAgo);
+
+
+
+
+#VWAP Levels at end of 3 days ago
+def vwapAtEndOf3DaysAgo = dailyVWAP[3];
+
+plot vwapAtEndOf3DaysAgoLine = vwapAtEndOf3DaysAgo;
+vwapAtEndOf3DaysAgoLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOf3DaysAgoLine.SetStyle(Curve.SHORT_DASH );
+vwapAtEndOf3DaysAgoLine.SetHiding(HideThreeDaysAgo);
+
+plot lineRegFib1Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt1;
+lineRegFib1Up3DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib1Up3DaysAgo.SetHiding(HideThreeDaysAgo);
+
+plot lineRegFib1Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt1;
+lineRegFib1Down3DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib1Down3DaysAgo.SetHiding(HideThreeDaysAgo);
+
+plot lineRegFib2Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt2;
+lineRegFib2Up3DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib2Up3DaysAgo.SetHiding(lineCount < 2 or HideThreeDaysAgo);
+
+plot lineRegFib2Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt2;
+lineRegFib2Down3DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+lineRegFib2Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib2Down3DaysAgo.SetHiding(lineCount < 2 or HideThreeDaysAgo);
+
+plot lineRegFib3Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt3;
+lineRegFib3Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib3Up3DaysAgo.SetHiding(lineCount < 3 or HideThreeDaysAgo);
+
+plot lineRegFib3Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt3;
+lineRegFib3Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib3Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib3Down3DaysAgo.SetHiding(lineCount < 3 or HideThreeDaysAgo);
+
+plot lineRegFib4Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt4;
+lineRegFib4Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib4Up3DaysAgo.SetHiding(lineCount < 4 or HideThreeDaysAgo);
+
+plot lineRegFib4Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt4;
+lineRegFib4Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+lineRegFib4Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib4Down3DaysAgo.SetHiding(lineCount < 4 or HideThreeDaysAgo);
+
+plot lineRegFib5Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt5;
+lineRegFib5Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib5Up3DaysAgo.SetHiding(lineCount < 5 or HideThreeDaysAgo);
+
+plot lineRegFib5Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt5;
+lineRegFib5Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+lineRegFib5Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib5Down3DaysAgo.SetHiding(lineCount < 5 or HideThreeDaysAgo);
+
+plot lineRegFib6Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt6;
+lineRegFib6Up3DaysAgo.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib6Up3DaysAgo.SetHiding(lineCount < 6 or HideThreeDaysAgo);
+
+plot lineRegFib6Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt6;
+lineRegFib6Down3DaysAgo.SetDefaultColor(color = Color.VIOLET);
+lineRegFib6Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+lineRegFib6Down3DaysAgo.SetHiding(lineCount < 6 or HideThreeDaysAgo);
+
