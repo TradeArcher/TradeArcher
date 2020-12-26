@@ -1,0 +1,43 @@
+#Volume Weighted Moving Average Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 12/25/2020
+
+input Price = close;
+input Length = 8;
+input Displace = 0;
+input AvgType = {default Simple, Exponential, Hull, Wilders, Weighted};
+
+def volPrice = (volume * Price);
+def volPriceMA;
+def volMA;
+def volWeightedMA;
+plot ma;
+
+switch (AvgType) {
+    case Exponential:
+        volPriceMA = ExpAverage(volPrice, Length);
+        volMA = ExpAverage(volume, Length);
+        volWeightedMA = volPriceMA / volMA;
+        ma = volWeightedMA[-Displace];
+    case Hull:
+        volPriceMA = HullMovingAvg(volPrice, Length);
+        volMA = HullMovingAvg(volume, Length);
+        volWeightedMA = volPriceMA / volMA;
+        ma = volWeightedMA[-Displace];
+    case Wilders:
+        volPriceMA = WildersAverage(volPrice, Length);
+        volMA = WildersAverage(volume, Length);
+        volWeightedMA = volPriceMA / volMA;
+        ma = volWeightedMA[-Displace];
+    case Weighted:
+        volPriceMA = MovAvgWeighted(volPrice, Length);
+        volMA = MovAvgWeighted(volume, Length);
+        volWeightedMA = volPriceMA / volMA;
+        ma = volWeightedMA[-Displace];
+    default:
+        volPriceMA = Average(volPrice, Length);
+        volMA = Average(volume, Length);
+        volWeightedMA = volPriceMA / volMA;
+        ma = volWeightedMA[-Displace];
+}

@@ -1,0 +1,36 @@
+#Potential Daily Pullback Opportunity
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/07/2020
+
+input shortEMAPeriod = 8;
+input longEMAPeriod = 26;
+input veryLongEMAPeriod = 50;
+
+input numberOfPeriodsBackForUptrend = 26;
+input maxRedCandlePercent = 25;
+input onBalanceVolumeUptrendPeriod = 40;
+input obvAcceptableSlope = 2.0;
+
+def shortEMA = MovAvgExponential(length = shortEMAPeriod);
+def longEMA = MovAvgExponential(length = longEMAPeriod );
+def veryLongEMA = MovAvgExponential(length = veryLongEMAPeriod );
+
+def meetsEMARequirement = shortEMA > longEMA and veryLongEMA < longEMA and veryLongEMA[numberOfPeriodsBackForUptrend] < longEMA[numberOfPeriodsBackForUptrend];
+
+def isRedCandle = (close < open);
+
+
+def redCount = Sum(isRedCandle[1], numberOfPeriodsBackForUptrend);
+def percentRedToGreen = (((numberOfPeriodsBackForUptrend - (numberOfPeriodsBackForUptrend - redCount)) / numberOfPeriodsBackForUptrend) * 100);
+
+def obvValue = OnBalanceVolume();
+
+def obvSlope = (obvValue - obvValue[onBalanceVolumeUptrendPeriod]) / onBalanceVolumeUptrendPeriod;
+def isOBVTrendingUp = obvSlope > obvAcceptableSlope;
+
+def atrValue = ATR("average type" = "WEIGHTED", length = numberOfPeriodsBackForUptrend);
+
+def recentGap = open >= if(isRedCandle[1], close[1], open[1]) and if(isRedCandle[1], close[1], open[1]) >= if(isRedCandle[2], close[2], open[2]) and if(isRedCandle[2], close[2], open[2]) >= if(isRedCandle[3], close[3], open[3]);
+
+plot buy = (isRedCandle[1] or isRedCandle) and percentRedToGreen <= maxRedCandlePercent and isOBVTrendingUp and meetsEMARequirement and !recentGap;
