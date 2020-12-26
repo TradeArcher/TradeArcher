@@ -12,6 +12,7 @@ def volPrice = (volume * Price);
 def volPriceMA;
 def volMA;
 def volWeightedMA;
+
 plot ma;
 
 switch (AvgType) {
