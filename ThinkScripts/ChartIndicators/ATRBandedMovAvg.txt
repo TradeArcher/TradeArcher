@@ -1,0 +1,116 @@
+#Moving Average with ATR Bands Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 12/28/2020
+
+input MovingAverageType = {default Simple, Exponential, Hull, Wilders, Weighted};
+input PriceType = {default Close, Open, High, Low};
+input TimeFrame = {default CURRENT, MIN, TWOMIN, THREEMIN, FOURMIN, FIVEMIN, TENMIN, FIFTEENMIN, TWENTYMIN, THIRTYMIN, HOUR, TWOHOURS, THREEHOURS, FOURHOURS, DAY, TWODAYS, THREEDAYS, FOURDAYS, WEEK, MONTH, QUARTER, YEAR};
+input Length = 21;
+input Displace = 0;
+input ATRLength = 14;
+input ATRUpperFactor1 = 2;
+input ATRUpperFactor2 = 3;
+input ATRLowerFactor1 = 1;
+input ATRLowerFactor2 = 1.5;
+input ShowUpperATR1 = yes;
+input ShowUpperATR2 = yes;
+input ShowLowerATR1 = yes;
+input ShowLowerATR2 = yes;
+
+
+def aggPeriod;
+switch (TimeFrame) {
+    case MIN:
+        aggPeriod = AggregationPeriod.MIN;
+    case TWOMIN:
+        aggPeriod = AggregationPeriod.TWO_MIN;
+    case THREEMIN:
+        aggPeriod = AggregationPeriod.THREE_MIN;
+    case FOURMIN:
+        aggPeriod = AggregationPeriod.FOUR_MIN;
+    case FIVEMIN:
+        aggPeriod = AggregationPeriod.FIVE_MIN;
+    case TENMIN:
+        aggPeriod = AggregationPeriod.TEN_MIN;
+    case FIFTEENMIN:
+        aggPeriod = AggregationPeriod.FIFTEEN_MIN;
+    case TWENTYMIN:
+        aggPeriod = AggregationPeriod.TWENTY_MIN;
+    case THIRTYMIN:
+        aggPeriod = AggregationPeriod.THIRTY_MIN;
+    case HOUR:
+        aggPeriod = AggregationPeriod.HOUR;
+    case TWOHOURS:
+        aggPeriod = AggregationPeriod.TWO_HOURS;
+    case FOURHOURS:
+        aggPeriod = AggregationPeriod.FOUR_HOURS;
+    case DAY:
+        aggPeriod = AggregationPeriod.DAY;
+    case TWODAYS:
+        aggPeriod = AggregationPeriod.TWO_DAYS;
+    case THREEDAYS:
+        aggPeriod = AggregationPeriod.THREE_DAYS;
+    case FOURDAYS:
+        aggPeriod = AggregationPeriod.FOUR_DAYS;
+    case WEEK:
+        aggPeriod = AggregationPeriod.WEEK;
+    case MONTH:
+        aggPeriod = AggregationPeriod.MONTH;
+    case QUARTER:
+        aggPeriod = AggregationPeriod.QUARTER;
+    case YEAR:
+        aggPeriod = AggregationPeriod.YEAR;
+    default:
+        aggPeriod = GetAggregationPeriod();
+}
+
+#we do this to prevent error when trying to plot a lower timeFrame since that is not supported
+def timePeriod = if(aggPeriod < GetAggregationPeriod(), GetAggregationPeriod(), aggPeriod);
+
+def price;
+switch (PriceType) {
+    case Close:
+        price = close(period = timePeriod);
+    case Open:
+        price = open(period = timePeriod);
+    case High:
+        price = high(period = timePeriod);
+    case Low:
+        price = low(period = timePeriod);
+}
+
+def ma;
+switch (MovingAverageType) {
+    case Simple:
+        ma = SimpleMovingAvg(price = price, length = Length, displace = Displace);
+    case Exponential:
+        ma = MovAvgExponential(price = price, length = Length, displace = Displace);
+    case Hull:
+        ma = HullMovingAvg(price = price, length = Length, displace = Displace);
+    case Wilders:
+        ma = WildersAverage(data = price, length = Length);
+    case Weighted:
+        ma = MovAvgWeighted(price = price, length = Length, displace = Displace);
+}
+
+def currentPrice;
+switch (PriceType) {
+    case Close:
+        currentPrice = close;
+    case Open:
+        currentPrice = open;
+    case High:
+        currentPrice = high;
+    case Low:
+        currentPrice = low;
+}
+
+plot movingAvg = ma;
+
+def ATRValue = ATR(ATRLength);
+
+plot ATRUpper1 = if(ShowUpperATR1, ma + (AtrValue * ATRUpperFactor1), Double.NaN);
+plot ATRUpper2 = if(ShowUpperATR2, ma + (AtrValue * ATRUpperFactor2), Double.NaN);
+plot ATRLower1 = if(ShowLowerATR1, ma + (AtrValue * -ATRLowerFactor1), Double.NaN);
+plot ATRLower2 = if(ShowLowerATR2, ma + (AtrValue * -ATRLowerFactor2), Double.NaN);
