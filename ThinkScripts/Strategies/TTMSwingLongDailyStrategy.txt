@@ -1,0 +1,117 @@
+#TTM Swing Long Daily Strategy
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/07/2020
+
+declare hide_on_intraday;
+
+input accountSize = 5000;
+input accountPercent = 10;
+input maxShares = 1000;
+input minAverageVolumeForFullSize = 75000;
+input avgVolPeriod = 5;
+
+input percentAcceptableLoss = 0.5;
+
+input includePremarket = no;
+
+#Begin Strategy Specific Inputs
+input shortEMAPeriod = 8;
+input longEMAPeriod = 26;
+input veryLongEMAPeriod = 200;
+
+input atrRiskFactor = 2;
+input atrRewardFactor = 3;
+
+input Price = low; 
+input sellPrice = open;
+input disableStrategy = no;
+#End Strategy Specific Inputs
+
+#***********************************************************************
+#Begin Strategy specific code
+
+def buyPrice = Price[-1];
+def shortEMA = MovAvgExponential(length = shortEMAPeriod);
+def longEMA = MovAvgExponential(length = longEMAPeriod);
+def veryLongEMA = MovAvgExponential(length = veryLongEMAPeriod);
+
+def ttmSqueezeVolComp = TTM_Squeeze().VolComp;
+def ttmSqueezeAlert = TTM_Squeeze().SqueezeAlert;
+def ttmSqueezeHistogram = TTM_Squeeze().Histogram;
+
+def atrValue = ATR();
+
+def isRedCandle = close < open;
+def bodyTopPrice = if(isRedCandle, open, close);
+
+#***********************************************************************
+#Calculate boilerplate minimum volume, premarket and share size variables
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / buyPrice, numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / buyPrice, numberOfDigits = 0 ), maxShares / 2));
+
+def numberOfShares = AbsValue(baseNumberOfShares);
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+#***********************************************************************
+
+#***********************************************************************
+#Begin Buy Order Section
+
+def meetsBuyLevel = low < shortEMA and shortEMA > longEMA and longEMA > veryLongEMA;
+def meetsSqueezeRequirements = !ttmSqueezeAlert;
+
+def buy = meetsBuyLevel and meetsSqueezeRequirements;
+
+#input shortEMAPeriod = 8;
+#input longEMAPeriod = 26;
+#input veryLongEMAPeriod = 200;
+
+#input atrRiskFactor = 2;
+#input atrRewardFactor = 3;
+
+#input buyPrice = low; 
+#input sellPrice = open;
+
+AddOrder(condition = buy[-1] and !disableStrategy, tradeSize = numberOfShares, price = buyPrice, tickColor = Color.LIME, arrowColor = Color.LIME, name = "TTMSwingLongDailyStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + shortEMAPeriod + ", " + longEMAPeriod + ", " + veryLongEMAPeriod + ", " + atrRiskFactor + ", " + atrRewardFactor + "] BUY @" + buyPrice, type = OrderType.BUY_TO_OPEN);
+
+Alert(buy and !disableStrategy, "TTMSwingLongDailyStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+
+#***********************************************************************
+#Begin Sell Order Section
+def isGain = sellPrice > EntryPrice();
+
+def percentGainLoss = ((sellPrice - EntryPrice()) / sellPrice) * 100;
+
+def cutLoss =  (EntryPrice() > sellPrice 
+    and (if(percentAcceptableLoss <= 0, no, percentGainLoss < (percentAcceptableLoss * -1))) 
+        or if(atrRiskFactor <= 0, no, (close <= (EntryPrice() - (atrValue * atrRiskFactor))))
+        or shortEMA < longEMA);
+
+def sell = (isGain and sellPrice >= EntryPrice() + (atrValue * atrRewardFactor)) or cutLoss;
+def sellAll = cutLoss;
+def sellHalf = (isGain and sellPrice >= EntryPrice() + (atrValue * atrRewardFactor));
+def sellRest = (isGain and shortEMA < longEMA);
+def sellHalfNumberOfShares = (RoundDown(numberOfShares / 2, numberOfDigits = 0));
+def sellRestNumberofShares = numberOfShares - sellHalfNumberOfShares;
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell and isGain and !disableStrategy, price = sellPrice, tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "TTMSwingLongDailyStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + shortEMAPeriod + ", " + longEMAPeriod + ", " + veryLongEMAPeriod + ", " + atrRiskFactor + ", " + atrRewardFactor + "] SELL " + numberOfShares + " @" + sellPrice + " P/L%: " + percentGainLoss );
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell and !isGain and !disableStrategy, price = sellPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "TTMSwingLongDailyStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + shortEMAPeriod + ", " + longEMAPeriod + ", " + veryLongEMAPeriod + ", " + atrRiskFactor + ", " + atrRewardFactor + "] SELL " + numberOfShares + " @" + sellPrice + " P/L%: " + percentGainLoss );
+
+#AddOrder( OrderType.SELL_TO_CLOSE, sellHalf and isGain, tradeSize = sellHalfNumberOfShares, price = sellPrice, tickColor = Color.DARK_GREEN, arrowColor = Color.DARK_GREEN, name = "TTMSwingLongDailyStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + shortEMAPeriod + ", " + longEMAPeriod + ", " + veryLongEMAPeriod + ", " + atrRiskFactor + ", " + atrRewardFactor + "] SELL " + sellHalfNumberOfShares + " @" + sellPrice + " P/L%: " + percentGainLoss );
+
+#AddOrder( OrderType.SELL_TO_CLOSE, sellRest and isGain, tradeSize = sellRestNumberofShares, price = sellPrice, tickColor = Color.LIGHT_GREEN, arrowColor = Color.LIGHT_GREEN, name = "TTMSwingLongDailyStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + shortEMAPeriod + ", " + longEMAPeriod + ", " + veryLongEMAPeriod + ", " + atrRiskFactor + ", " + atrRewardFactor + "] SELL " + sellRestNumberOfShares + " @" + sellPrice + " P/L%: " + percentGainLoss );
+
+#AddOrder( OrderType.SELL_TO_CLOSE, sellAll and !isGain, price = sellPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "TTMSwingLongDailyStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + shortEMAPeriod + ", " + longEMAPeriod + ", " + veryLongEMAPeriod + ", " + atrRiskFactor + ", " + atrRewardFactor + "] SELL " + numberOfShares + " @" + sellPrice + " P/L%: " + percentGainLoss );
