@@ -1,6 +1,6 @@
 #Supply and Demand Zones Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 01/01/2020
 
 input showSupplyZones = yes;
@@ -355,21 +355,21 @@ def szCount = if (isSupplyZone != isSupplyZone[1]) then if((szCount[1] + isSuppl
 
 #AddChartBubble(isSupplyZone and (isSupplyZone != isSupplyZone[1]), high+2, "SZ\n" + szCount + "\n" + isSupplyZone + "\n" + maxSZones + "\n" + ((szCount[1] + isSupplyZone) % maxSZones));
 
-def szTopPrice = If(isSupplyZone, If(highPrice < highPrice[-1], highPrice, highPrice[-1]), If(szTopPrice[1] > 0, szTopPrice[1], Double.NaN));
+def szTopPrice = If(isSupplyZone, If(highPrice > highPrice[-1], highPrice, highPrice[-1]), If(szTopPrice[1] > 0, szTopPrice[1], Double.NaN));
 
-def freshSZTopPrice = 
+def freshSZBottomPrice = 
 if isUp then
-    if closePrice[-1] < openPrice and closePrice[-1] < closePrice then
-        closePrice[-1]
+    if openPrice[-1] < openPrice and openPrice[-1] < closePrice then
+        openPrice[-1]
     else
-        closePrice
+        openPrice
 else
     if closePrice < closePrice[-1] then
         closePrice
     else
         closePrice[-1];
 
-def szBottomPrice = If(isSupplyZone, freshSZTopPrice, If(szBottomPrice[1] > 0, szBottomPrice[1], Double.NaN));
+def szBottomPrice = If(isSupplyZone, freshSZBottomPrice, If(szBottomPrice[1] > 0, szBottomPrice[1], Double.NaN));
 
 DefineGlobalColor("SupplyZone", Color.DOWNTICK);
 
