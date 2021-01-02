@@ -1,6 +1,6 @@
 #Supply and Demand Zones Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.2
+#Version: 0.3
 #Date Created: 01/01/2020
 
 input showSupplyZones = yes;
@@ -18,6 +18,8 @@ input RBDRallyCandleATRRangePercent = 25;
 input RBDDropCandleATRRangePercent = 50;
 input DBDPreDropCandleATRRangePercent = 25;
 input DBDDropContinuationCandleATRRangePercent = 50;
+
+input ATRLength = 14;
 
 
 
@@ -105,13 +107,14 @@ script isDBR {
     input openPrice = open;
     input highPrice = high;
     input lowPrice = low;
+    input ATRLength = 14;
 
     def isUp = closePrice > openPrice;
     def isDown = closePrice < openPrice;
 
     def bodyTop = If(isDown, closePrice, openPrice);
     def bodyBottom = If(isDown, openPrice, closePrice);
-    def atrValue = ATR(length = 14);
+    def atrValue = ATR(length = ATRLength);
     def candleFullRange = highPrice - lowPrice;
     def candleBodyRange = If(isDown, openPrice - closePrice, closePrice - openPrice);
 
@@ -138,6 +141,7 @@ script isRBR {
     input openPrice = open;
     input highPrice = high;
     input lowPrice = low;
+    input ATRLength = 14;
 
     def IsUp = closePrice > openPrice;
     def IsDown = closePrice < openPrice;
@@ -145,7 +149,7 @@ script isRBR {
 
     def bodyTop = If(IsDown, closePrice, openPrice);
     def bodyBottom = If(IsDown, openPrice, closePrice);
-    def atrValue = ATR(length = 14);
+    def atrValue = ATR(length = ATRLength);
     def candleFullRange = highPrice - lowPrice;
     def candleBodyRange = If(IsDown, openPrice - closePrice, closePrice - openPrice);
 
@@ -173,6 +177,7 @@ script isRBD {
     input openPrice = open;
     input highPrice = high;
     input lowPrice = low;
+    input ATRLength = 14;
 
     def isUp = closePrice > openPrice;
     def isDown = closePrice < openPrice;
@@ -180,7 +185,7 @@ script isRBD {
 
     def bodyTop = If(isDown, closePrice, openPrice);
     def bodyBottom = If(isDown, openPrice, closePrice);
-    def atrValue = ATR(length = 14);
+    def atrValue = ATR(length = ATRLength);
     def candleFullRange = highPrice - lowPrice;
     def candleBodyRange = If(isDown, openPrice - closePrice, closePrice - openPrice);
 
@@ -207,6 +212,7 @@ script isDBD {
     input openPrice = open;
     input highPrice = high;
     input lowPrice = low;
+    input ATRLength = 14;
 
     def IsUp = closePrice > openPrice;
     def IsDown = closePrice < openPrice;
@@ -214,7 +220,7 @@ script isDBD {
 
     def bodyTop = If(IsDown, closePrice, openPrice);
     def bodyBottom = If(IsDown, openPrice, closePrice);
-    def atrValue = ATR(length = 14);
+    def atrValue = ATR(length = ATRLength);
     def candleFullRange = highPrice - lowPrice;
     def candleBodyRange = If(IsDown, openPrice - closePrice, closePrice - openPrice);
 
@@ -274,7 +280,7 @@ def isUp = closePrice > openPrice;
 def isDown = closePrice < openPrice;
 
 
-def isDemandZone = If(showDemandZones, (isRBR(RBRPreRallyCandleATRRangePercent, RBRRallyContinuationCandleATRRangePercent) or isDBR(DBRDropCandleATRRangePercent, DBRRallyCandleATRRangePercent, closePrice, openPrice, highPrice, lowPrice)), no);
+def isDemandZone = If(showDemandZones, (isRBR(RBRPreRallyCandleATRRangePercent, RBRRallyContinuationCandleATRRangePercent, ATRLength) or isDBR(DBRDropCandleATRRangePercent, DBRRallyCandleATRRangePercent, closePrice, openPrice, highPrice, lowPrice, ATRLength)), no);
 
 def dzCount = if (isDemandZone != isDemandZone[1]) then if((dzCount[1] + isDemandZone) <= maxDZones, (dzCount[1] + isDemandZone), 1) else dzCount[1];
 
@@ -349,7 +355,7 @@ dzTopPriceLine5.AssignValueColor(GlobalColor("DemandZone"));
 AddCloud(dzTopPriceLine5, dzBottomPriceLine5, color1 = GlobalColor("DemandZone"), color2 = GlobalColor("DemandZone"));
 
 
-def isSupplyZone = If(showSupplyZones, (isDBD(DBDPreDropCandleATRRangePercent, DBDDropContinuationCandleATRRangePercent) or isRBD(RBDRallyCandleATRRangePercent, RBDDropCandleATRRangePercent)), no);
+def isSupplyZone = If(showSupplyZones, (isDBD(DBDPreDropCandleATRRangePercent, DBDDropContinuationCandleATRRangePercent, closePrice, openPrice, highPrice, lowPrice, ATRLength) or isRBD(RBDRallyCandleATRRangePercent, RBDDropCandleATRRangePercent, closePrice, openPrice, highPrice, lowPrice, ATRLength)), no);
 
 def szCount = if (isSupplyZone != isSupplyZone[1]) then if((szCount[1] + isSupplyZone) <= maxSZones, (szCount[1] + isSupplyZone), 1) else szCount[1];
 
