@@ -1,0 +1,424 @@
+#Supply and Demand Zones Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 01/01/2020
+
+input showSupplyZones = yes;
+input showDemandZones = yes;
+input maxSupplyZones = {one, two, three, four, default five};
+input maxDemandZones = {one, two, three, four, default five};
+input TimeFrame = {default CURRENT, MIN, TWOMIN, THREEMIN, FOURMIN, FIVEMIN, TENMIN, FIFTEENMIN, TWENTYMIN, THIRTYMIN, HOUR, TWOHOURS, THREEHOURS, FOURHOURS, DAY, TWODAYS, THREEDAYS, FOURDAYS, WEEK, MONTH, QUARTER, YEAR};
+
+input DBRDropCandleATRRangePercent = 25;
+input DBRRallyCandleATRRangePercent = 50;
+input RBRPreRallyCandleATRRangePercent = 25;
+input RBRRallyContinuationCandleATRRangePercent = 50;
+
+input RBDRallyCandleATRRangePercent = 25;
+input RBDDropCandleATRRangePercent = 50;
+input DBDPreDropCandleATRRangePercent = 25;
+input DBDDropContinuationCandleATRRangePercent = 50;
+
+
+
+
+#Begin GetPrice code ************************************
+script GetPrice {
+
+    input PriceType = {default Close, Open, High, Low};
+    input TimeFrame = {default CURRENT, MIN, TWOMIN, THREEMIN, FOURMIN, FIVEMIN, TENMIN, FIFTEENMIN, TWENTYMIN, THIRTYMIN, HOUR, TWOHOURS, THREEHOURS, FOURHOURS, DAY, TWODAYS, THREEDAYS, FOURDAYS, WEEK, MONTH, QUARTER, YEAR};
+    input Offset = 0;
+
+    def aggPeriod;
+switch (TimeFrame) {
+    case MIN:
+        aggPeriod = AggregationPeriod.MIN;
+    case TWOMIN:
+        aggPeriod = AggregationPeriod.TWO_MIN;
+    case THREEMIN:
+        aggPeriod = AggregationPeriod.THREE_MIN;
+    case FOURMIN:
+        aggPeriod = AggregationPeriod.FOUR_MIN;
+    case FIVEMIN:
+        aggPeriod = AggregationPeriod.FIVE_MIN;
+    case TENMIN:
+        aggPeriod = AggregationPeriod.TEN_MIN;
+    case FIFTEENMIN:
+        aggPeriod = AggregationPeriod.FIFTEEN_MIN;
+    case TWENTYMIN:
+        aggPeriod = AggregationPeriod.TWENTY_MIN;
+    case THIRTYMIN:
+        aggPeriod = AggregationPeriod.THIRTY_MIN;
+    case HOUR:
+        aggPeriod = AggregationPeriod.HOUR;
+    case TWOHOURS:
+        aggPeriod = AggregationPeriod.TWO_HOURS;
+    case FOURHOURS:
+        aggPeriod = AggregationPeriod.FOUR_HOURS;
+    case DAY:
+        aggPeriod = AggregationPeriod.DAY;
+    case TWODAYS:
+        aggPeriod = AggregationPeriod.TWO_DAYS;
+    case THREEDAYS:
+        aggPeriod = AggregationPeriod.THREE_DAYS;
+    case FOURDAYS:
+        aggPeriod = AggregationPeriod.FOUR_DAYS;
+    case WEEK:
+        aggPeriod = AggregationPeriod.WEEK;
+    case MONTH:
+        aggPeriod = AggregationPeriod.MONTH;
+    case QUARTER:
+        aggPeriod = AggregationPeriod.QUARTER;
+    case YEAR:
+        aggPeriod = AggregationPeriod.YEAR;
+    default:
+        aggPeriod = GetAggregationPeriod();
+}
+
+#we do this to prevent error when trying to plot a lower timeFrame since that is not supported
+    def timePeriod = If(aggPeriod < GetAggregationPeriod(), GetAggregationPeriod(), aggPeriod);
+
+    plot price;
+    switch (PriceType) {
+    case Close:
+        price = close(period = timePeriod)[Offset];
+    case Open:
+        price = open(period = timePeriod)[Offset];
+    case High:
+        price = high(period = timePeriod)[Offset];
+    case Low:
+        price = low(period = timePeriod)[Offset];
+}
+
+}
+#End GetPrice code ************************************
+
+
+
+
+#Begin Drop Base Rally Check ********************************************
+script isDBR {
+
+    input dropCandleATRRangePercent = 25;
+    input rallyCandleATRRangePercent = 50;
+    input closePrice = close;
+    input openPrice = open;
+    input highPrice = high;
+    input lowPrice = low;
+
+    def isUp = closePrice > openPrice;
+    def isDown = closePrice < openPrice;
+
+    def bodyTop = If(isDown, closePrice, openPrice);
+    def bodyBottom = If(isDown, openPrice, closePrice);
+    def atrValue = ATR(length = 14);
+    def candleFullRange = highPrice - lowPrice;
+    def candleBodyRange = If(isDown, openPrice - closePrice, closePrice - openPrice);
+
+    def isDescendingBarAboveAverageRange = candleFullRange > atrValue + atrValue * (dropCandleATRRangePercent / 100);
+    def isAscendingBarAboveAverageRange = candleBodyRange > atrValue + atrValue * (rallyCandleATRRangePercent / 100);
+
+    def is2BarDescending = isDown and closePrice < bodyTop[1] and isDescendingBarAboveAverageRange;
+    def is2BarDescendingInLast10Bars = is2BarDescending within 10 bars;
+
+    plot DropBaseRallyPattern = is2BarDescendingInLast10Bars and isUp[-1] and isAscendingBarAboveAverageRange[-1];
+    DropBaseRallyPattern.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_UP);
+    DropBaseRallyPattern.SetDefaultColor(GetColor(0));
+
+#AddChartBubble(is2BarDescendingInLast10Bars, high, is2BarDescendingInLast10Bars);
+}
+#End Drop Base Rally Check ********************************************
+
+#Begin Rally Base Rally Check ********************************************
+script isRBR {
+
+    input preRallyCandleATRRangePercent = 25;
+    input rallyContinuationCandleATRRangePercent = 50;
+    input closePrice = close;
+    input openPrice = open;
+    input highPrice = high;
+    input lowPrice = low;
+
+    def IsUp = closePrice > openPrice;
+    def IsDown = closePrice < openPrice;
+    def IsDoji = IsDoji();
+
+    def bodyTop = If(IsDown, closePrice, openPrice);
+    def bodyBottom = If(IsDown, openPrice, closePrice);
+    def atrValue = ATR(length = 14);
+    def candleFullRange = highPrice - lowPrice;
+    def candleBodyRange = If(IsDown, openPrice - closePrice, closePrice - openPrice);
+
+    def isPreRallyBarAboveAverageRange = candleFullRange > atrValue + atrValue * (preRallyCandleATRRangePercent / 100);
+    def isAscendingBarAboveAverageRange = candleBodyRange > atrValue + atrValue * (rallyContinuationCandleATRRangePercent / 100);
+
+    def is2BarAscending = IsUp and closePrice > bodyTop[1] and isPreRallyBarAboveAverageRange;
+    def is2BarAscendingInLast10Bars = is2BarAscending within 10 bars;
+
+    plot RallyBaseRallyPattern = is2BarAscendingInLast10Bars and IsUp[-1] and isAscendingBarAboveAverageRange[-1];
+    RallyBaseRallyPattern.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_UP);
+    RallyBaseRallyPattern.SetDefaultColor(GetColor(0));
+
+#AddChartBubble(is2BarDescendingInLast10Bars, high, is2BarDescendingInLast10Bars);
+}
+#End Rally Base Rally Check ********************************************
+
+
+#Begin Rally Base Drop Check ********************************************
+script isRBD {
+
+    input rallyCandleATRRangePercent = 25;
+    input dropCandleATRRangePercent = 50;
+    input closePrice = close;
+    input openPrice = open;
+    input highPrice = high;
+    input lowPrice = low;
+
+    def isUp = closePrice > openPrice;
+    def isDown = closePrice < openPrice;
+    def isDoji = IsDoji();
+
+    def bodyTop = If(isDown, closePrice, openPrice);
+    def bodyBottom = If(isDown, openPrice, closePrice);
+    def atrValue = ATR(length = 14);
+    def candleFullRange = highPrice - lowPrice;
+    def candleBodyRange = If(isDown, openPrice - closePrice, closePrice - openPrice);
+
+    def isAscendingBarAboveAverageRange = candleFullRange > atrValue + atrValue * (rallyCandleATRRangePercent / 100);
+    def isDescendingBarAboveAverageRange = candleBodyRange > atrValue + atrValue * (dropCandleATRRangePercent / 100);
+
+    def is2BarAscending = isUp and closePrice > bodyTop[1] and isAscendingBarAboveAverageRange;
+    def is2BarAscendingInLast10Bars = is2BarAscending within 10 bars;
+
+    plot RallyBaseDropPattern = is2BarAscendingInLast10Bars and isDown[-1] and isDescendingBarAboveAverageRange[-1];
+    RallyBaseDropPattern.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_UP);
+    RallyBaseDropPattern.SetDefaultColor(GetColor(0));
+
+#AddChartBubble(is2BarDescendingInLast10Bars, high, is2BarDescendingInLast10Bars);
+}
+#End Rally Base Drop Check ********************************************
+
+#Begin Rally Base Rally Check ********************************************
+script isDBD {
+
+    input preDropCandleATRRangePercent = 25;
+    input dropContinuationCandleATRRangePercent = 50;
+    input closePrice = close;
+    input openPrice = open;
+    input highPrice = high;
+    input lowPrice = low;
+
+    def IsUp = closePrice > openPrice;
+    def IsDown = closePrice < openPrice;
+    def IsDoji = IsDoji();
+
+    def bodyTop = If(IsDown, closePrice, openPrice);
+    def bodyBottom = If(IsDown, openPrice, closePrice);
+    def atrValue = ATR(length = 14);
+    def candleFullRange = highPrice - lowPrice;
+    def candleBodyRange = If(IsDown, openPrice - closePrice, closePrice - openPrice);
+
+    def isPreDropBarAboveAverageRange = candleFullRange > atrValue + atrValue * (preDropCandleATRRangePercent / 100);
+    def isDescendingBarAboveAverageRange = candleBodyRange > atrValue + atrValue * (dropContinuationCandleATRRangePercent / 100);
+
+    def is2BarDescending = IsDown and closePrice < bodyTop[1] and isPreDropBarAboveAverageRange;
+    def is2BarDescendingInLast10Bars = is2BarDescending within 10 bars;
+
+    plot DropBaseDropPattern = is2BarDescendingInLast10Bars and IsDown[-1] and isDescendingBarAboveAverageRange[-1];
+    DropBaseDropPattern.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_UP);
+    DropBaseDropPattern.SetDefaultColor(GetColor(0));
+
+#AddChartBubble(is2BarDescendingInLast10Bars, high, is2BarDescendingInLast10Bars);
+}
+#End Rally Base Rally Check ********************************************
+
+
+
+
+
+#Begin Supply And Demand Zone Algorithm ********************************
+
+def maxSZones;
+switch (maxSupplyZones) {
+    case one:
+        maxSZones = 1;
+    case two:
+        maxSZones = 2;
+    case three:
+        maxSZones = 3;
+    case four:
+        maxSZones = 4;
+    default:
+        maxSZones = 5;
+}
+
+def maxDZones;
+switch (maxDemandZones) {
+    case one:
+        maxDZones = 1;
+    case two:
+        maxDZones = 2;
+    case three:
+        maxDZones = 3;
+    case four:
+        maxDZones = 4;
+    default:
+        maxDZones = 5;
+}
+
+def closePrice = GetPrice("Close", TimeFrame);
+def openPrice = GetPrice("Open", TimeFrame);
+def highPrice = GetPrice("High", TimeFrame);
+def lowPrice = GetPrice("Low", TimeFrame);
+def isUp = closePrice > openPrice;
+def isDown = closePrice < openPrice;
+
+
+def isDemandZone = If(showDemandZones, (isRBR(RBRPreRallyCandleATRRangePercent, RBRRallyContinuationCandleATRRangePercent) or isDBR(DBRDropCandleATRRangePercent, DBRRallyCandleATRRangePercent, closePrice, openPrice, highPrice, lowPrice)), no);
+
+def dzCount = if (isDemandZone != isDemandZone[1]) then if((dzCount[1] + isDemandZone) <= maxDZones, (dzCount[1] + isDemandZone), 1) else dzCount[1];
+
+#AddChartBubble(isDemandZone and (isDemandZone != isDemandZone[1]), high-2, "DZ\n" + dzCount + "\n" + isDemandZone + "\n" + maxDZones + "\n" + ((dzCount[1] + isDemandZone) % maxDZones));
+
+def dzBottomPrice = If(isDemandZone, If(lowPrice < lowPrice[-1], lowPrice, lowPrice[-1]), If(dzBottomPrice[1] > 0, dzBottomPrice[1], Double.NaN));
+
+def freshDZTopPrice = 
+if isDown then
+    if openPrice[-1] > closePrice and openPrice[-1] > openPrice then
+        openPrice[-1]
+    else
+        openPrice
+else
+    if openPrice > openPrice[-1] then
+        openPrice
+    else
+        openPrice[-1];
+
+def dzTopPrice = If(isDemandZone, freshDZTopPrice, If(dzTopPrice[1] > 0, dzTopPrice[1], Double.NaN));
+
+DefineGlobalColor("DemandZone", Color.UPTICK);
+
+def dzBottomPrice1 = if dzCount == 1 then if(dzBottomPrice != dzBottomPrice1[1], dzBottomPrice, dzBottomPrice1[1]) else dzBottomPrice1[1];
+plot dzBottomPriceLine1 = if(dzBottomPrice1 != dzBottomPrice1[-1], Double.NaN, dzBottomPrice1);
+dzBottomPriceLine1.AssignValueColor(GlobalColor("DemandZone"));
+#dzBottomPriceLine1.SetHiding(yes);
+def dzTopPrice1 = if dzCount == 1 then if(dzTopPrice != dzTopPrice1[1], dzTopPrice, dzTopPrice1[1]) else dzTopPrice1[1];
+plot dzTopPriceLine1 = if(dzTopPrice1 != dzTopPrice1[-1], Double.NaN, dzTopPrice1);
+dzTopPriceLine1.AssignValueColor(GlobalColor("DemandZone"));
+#dzTopPriceLine1.SetHiding(yes);
+AddCloud(dzTopPriceLine1, dzBottomPriceLine1, color1 = GlobalColor("DemandZone"), color2 = GlobalColor("DemandZone"));
+
+def dzBottomPrice2 = if dzCount == 2 then if(dzBottomPrice != dzBottomPrice2[1], dzBottomPrice, dzBottomPrice2[1]) else dzBottomPrice2[1];
+plot dzBottomPriceLine2 = if(dzBottomPrice2 != dzBottomPrice2[-1], Double.NaN, dzBottomPrice2);
+dzBottomPriceLine2.AssignValueColor(GlobalColor("DemandZone"));
+#dzBottomPriceLine2.SetHiding(yes);
+def dzTopPrice2 = if dzCount == 2 then if(dzTopPrice != dzTopPrice2[1], dzTopPrice, dzTopPrice2[1]) else dzTopPrice2[1];
+plot dzTopPriceLine2 = if(dzTopPrice2 != dzTopPrice2[-1], Double.NaN, dzTopPrice2);
+dzTopPriceLine2.AssignValueColor(GlobalColor("DemandZone"));
+#dzTopPriceLine2.SetHiding(yes);
+AddCloud(dzTopPriceLine2, dzBottomPriceLine2, color1 = GlobalColor("DemandZone"), color2 = GlobalColor("DemandZone"));
+
+def dzBottomPrice3 = if dzCount == 3 then if(dzBottomPrice != dzBottomPrice3[1], dzBottomPrice, dzBottomPrice3[1]) else dzBottomPrice3[1];
+plot dzBottomPriceLine3 = if(dzBottomPrice3 != dzBottomPrice3[-1], Double.NaN, dzBottomPrice3);
+dzBottomPriceLine3.AssignValueColor(GlobalColor("DemandZone"));
+#dzBottomPriceLine3.SetHiding(yes);
+def dzTopPrice3 = if dzCount == 3 then if(dzTopPrice != dzTopPrice3[1], dzTopPrice, dzTopPrice3[1]) else dzTopPrice3[1];
+plot dzTopPriceLine3 = if(dzTopPrice3 != dzTopPrice3[-1], Double.NaN, dzTopPrice3);
+dzTopPriceLine3.AssignValueColor(GlobalColor("DemandZone"));
+#dzTopPriceLine3.SetHiding(yes);
+AddCloud(dzTopPriceLine3, dzBottomPriceLine3, color1 = GlobalColor("DemandZone"), color2 = GlobalColor("DemandZone"));
+
+def dzBottomPrice4 = if dzCount == 4 then if(dzBottomPrice != dzBottomPrice4[1], dzBottomPrice, dzBottomPrice4[1]) else dzBottomPrice4[1];
+plot dzBottomPriceLine4 = if(dzBottomPrice4 != dzBottomPrice4[-1], Double.NaN, dzBottomPrice4);
+dzBottomPriceLine4.AssignValueColor(GlobalColor("DemandZone"));
+#dzBottomPriceLine4.SetHiding(yes);
+def dzTopPrice4 = if dzCount == 4 then if(dzTopPrice != dzTopPrice4[1], dzTopPrice, dzTopPrice4[1]) else dzTopPrice4[1];
+plot dzTopPriceLine4 = if(dzTopPrice4 != dzTopPrice4[-1], Double.NaN, dzTopPrice4);
+dzTopPriceLine4.AssignValueColor(GlobalColor("DemandZone"));
+#dzTopPriceLine4.SetHiding(yes);
+AddCloud(dzTopPriceLine4, dzBottomPriceLine4, color1 = GlobalColor("DemandZone"), color2 = GlobalColor("DemandZone"));
+
+def dzBottomPrice5 = if dzCount == 5 then if(dzBottomPrice != dzBottomPrice5[1], dzBottomPrice, dzBottomPrice5[1]) else dzBottomPrice5[1];
+plot dzBottomPriceLine5 = if(dzBottomPrice5 != dzBottomPrice5[-1], Double.NaN, dzBottomPrice5);
+dzBottomPriceLine5.AssignValueColor(GlobalColor("DemandZone"));
+#dzBottomPriceLine5.SetHiding(yes);
+def dzTopPrice5 = if dzCount == 5 then if(dzTopPrice != dzTopPrice5[1], dzTopPrice, dzTopPrice5[1]) else dzTopPrice5[1];
+plot dzTopPriceLine5 = if(dzTopPrice5 != dzTopPrice5[-1], Double.NaN, dzTopPrice5);
+dzTopPriceLine5.AssignValueColor(GlobalColor("DemandZone"));
+#dzTopPriceLine5.SetHiding(yes);
+AddCloud(dzTopPriceLine5, dzBottomPriceLine5, color1 = GlobalColor("DemandZone"), color2 = GlobalColor("DemandZone"));
+
+
+def isSupplyZone = If(showSupplyZones, (isDBD(DBDPreDropCandleATRRangePercent, DBDDropContinuationCandleATRRangePercent) or isRBD(RBDRallyCandleATRRangePercent, RBDDropCandleATRRangePercent)), no);
+
+def szCount = if (isSupplyZone != isSupplyZone[1]) then if((szCount[1] + isSupplyZone) <= maxSZones, (szCount[1] + isSupplyZone), 1) else szCount[1];
+
+#AddChartBubble(isSupplyZone and (isSupplyZone != isSupplyZone[1]), high+2, "SZ\n" + szCount + "\n" + isSupplyZone + "\n" + maxSZones + "\n" + ((szCount[1] + isSupplyZone) % maxSZones));
+
+def szTopPrice = If(isSupplyZone, If(highPrice < highPrice[-1], highPrice, highPrice[-1]), If(szTopPrice[1] > 0, szTopPrice[1], Double.NaN));
+
+def freshSZTopPrice = 
+if isUp then
+    if closePrice[-1] < openPrice and closePrice[-1] < closePrice then
+        closePrice[-1]
+    else
+        closePrice
+else
+    if closePrice < closePrice[-1] then
+        closePrice
+    else
+        closePrice[-1];
+
+def szBottomPrice = If(isSupplyZone, freshSZTopPrice, If(szBottomPrice[1] > 0, szBottomPrice[1], Double.NaN));
+
+DefineGlobalColor("SupplyZone", Color.DOWNTICK);
+
+def szBottomPrice1 = if szCount == 1 then if(szBottomPrice != szBottomPrice1[1], szBottomPrice, szBottomPrice1[1]) else szBottomPrice1[1];
+plot szBottomPriceLine1 = if(szBottomPrice1 != szBottomPrice1[-1], Double.NaN, szBottomPrice1);
+szBottomPriceLine1.AssignValueColor(GlobalColor("SupplyZone"));
+#szBottomPriceLine1.SetHiding(szBottomPriceLine1 <= 0);
+def szTopPrice1 = if szCount == 1 then if(szTopPrice != szTopPrice1[1], szTopPrice, szTopPrice1[1]) else szTopPrice1[1];
+plot szTopPriceLine1 = if(szTopPrice1 != szTopPrice1[-1], Double.NaN, szTopPrice1);
+szTopPriceLine1.AssignValueColor(GlobalColor("SupplyZone"));
+#szTopPriceLine1.SetHiding(szTopPriceLine1 <= 0);
+AddCloud(szTopPriceLine1, szBottomPriceLine1, color1 = GlobalColor("SupplyZone"), color2 = GlobalColor("SupplyZone"));
+
+def szBottomPrice2 = if szCount == 2 then if(szBottomPrice != szBottomPrice2[1], szBottomPrice, szBottomPrice2[1]) else szBottomPrice2[1];
+plot szBottomPriceLine2 = if(szBottomPrice2 != szBottomPrice2[-1], Double.NaN, szBottomPrice2);
+szBottomPriceLine2.AssignValueColor(GlobalColor("SupplyZone"));
+#szBottomPriceLine2.SetHiding(szBottomPriceLine2 <= 0 or IsNaN(szBottomPriceLine2));
+def szTopPrice2 = if szCount == 2 then if(szTopPrice != szTopPrice2[1], szTopPrice, szTopPrice2[1]) else szTopPrice2[1];
+plot szTopPriceLine2 = if(szTopPrice2 != szTopPrice2[-1], Double.NaN, szTopPrice2);
+szTopPriceLine2.AssignValueColor(GlobalColor("SupplyZone"));
+#szTopPriceLine2.SetHiding(szTopPriceLine2 <= 0 or IsNaN(szTopPriceLine2));
+AddCloud(szTopPriceLine2, szBottomPriceLine2, color1 = GlobalColor("SupplyZone"), color2 = GlobalColor("SupplyZone"));
+
+def szBottomPrice3 = if szCount == 3 then if(szBottomPrice != szBottomPrice3[1], szBottomPrice, szBottomPrice3[1]) else szBottomPrice3[1];
+plot szBottomPriceLine3 = if(szBottomPrice3 != szBottomPrice3[-1], Double.NaN, szBottomPrice3);
+szBottomPriceLine3.AssignValueColor(GlobalColor("SupplyZone"));
+#szBottomPriceLine3.SetHiding(szBottomPriceLine3 <= 0 or IsNaN(szBottomPriceLine3));
+def szTopPrice3 = if szCount == 3 then if(szTopPrice != szTopPrice3[1], szTopPrice, szTopPrice3[1]) else szTopPrice3[1];
+plot szTopPriceLine3 = if(szTopPrice3 != szTopPrice3[-1], Double.NaN, szTopPrice3);
+szTopPriceLine3.AssignValueColor(GlobalColor("SupplyZone"));
+#szTopPriceLine3.SetHiding(szTopPriceLine3 <= 0 or IsNaN(szTopPriceLine3));
+AddCloud(szTopPriceLine3, szBottomPriceLine3, color1 = GlobalColor("SupplyZone"), color2 = GlobalColor("SupplyZone"));
+#AddChartBubble(yes, high, szTopPriceLine3 + "\n" + szBottomPriceLine3);
+def szBottomPrice4 = if szCount == 4 then if(szBottomPrice != szBottomPrice4[1], szBottomPrice, szBottomPrice4[1]) else szBottomPrice4[1];
+plot szBottomPriceLine4 = if(szBottomPrice4 != szBottomPrice4[-1], Double.NaN, szBottomPrice4);
+szBottomPriceLine4.AssignValueColor(GlobalColor("SupplyZone"));
+#szBottomPriceLine4.SetHiding(szBottomPriceLine4 <= 0);
+def szTopPrice4 = if szCount == 4 then if(szTopPrice != szTopPrice4[1], szTopPrice, szTopPrice4[1]) else szTopPrice4[1];
+plot szTopPriceLine4 = if(szTopPrice4 != szTopPrice4[-1], Double.NaN, szTopPrice4);
+szTopPriceLine4.AssignValueColor(GlobalColor("SupplyZone"));
+#szTopPriceLine4.SetHiding(szTopPriceLine4 <= 0);
+AddCloud(szTopPriceLine4, szBottomPriceLine4, color1 = GlobalColor("SupplyZone"), color2 = GlobalColor("SupplyZone"));
+
+def szBottomPrice5 = if szCount == 5 then if(szBottomPrice != szBottomPrice5[1], szBottomPrice, szBottomPrice5[1]) else szBottomPrice5[1];
+plot szBottomPriceLine5 = if(szBottomPrice5 != szBottomPrice5[-1], Double.NaN, szBottomPrice5);
+szBottomPriceLine5.AssignValueColor(GlobalColor("SupplyZone"));
+#szBottomPriceLine5.SetHiding(szBottomPriceLine5 <= 0);
+def szTopPrice5 = if szCount == 5 then if(szTopPrice != szTopPrice5[1], szTopPrice, szTopPrice5[1]) else szTopPrice5[1];
+plot szTopPriceLine5 = if(szTopPrice5 != szTopPrice5[-1], Double.NaN, szTopPrice5);
+szTopPriceLine5.AssignValueColor(GlobalColor("SupplyZone"));
+#szTopPriceLine5.SetHiding(szTopPriceLine5 <= 0);
+AddCloud(szTopPriceLine5, szBottomPriceLine5, color1 = GlobalColor("SupplyZone"), color2 = GlobalColor("SupplyZone"));
