@@ -1,0 +1,98 @@
+#Stacked EMA Pullback Strategy
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 01/17/2021
+
+input accountSize = 5000;
+input accountPercent = 10;
+input maxShares = 1000;
+input minAverageVolumeForFullSize = 75000;
+input avgVolPeriod = 5;
+
+input includePremarket = no;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+#Begin Strategy Specific Inputs
+input emaPeriod1 = 8;
+input emaPeriod2 = 21;
+input emaPeriod3 = 34;
+input emaPeriod4 = 55;
+input emaPeriod5 = 84;
+input emaPeriod6 = 200;
+input hullMAPeriod = 6;
+
+input recentHighPeriod = 5;
+
+def buyPrice = low; 
+def sellPrice = high;
+#End Strategy Specific Inputs
+
+#***********************************************************************
+#Begin Strategy specific code
+
+def ema1 = MovAvgExponential(length = emaPeriod1);
+def ema2 = MovAvgExponential(length = emaPeriod2);
+def ema3 = MovAvgExponential(length = emaPeriod3);
+def ema4 = MovAvgExponential(length = emaPeriod4);
+def ema5 = MovAvgExponential(length = emaPeriod5);
+def ema6 = MovAvgExponential(length = emaPeriod6);
+def hullMA = HullMovingAvg(length = hullMAPeriod);
+
+def atrValue = ATR();
+
+#***********************************************************************
+#Calculate boilerplate minimum volume, premarket and share size variables
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / buyPrice, numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / buyPrice, numberOfDigits = 0 ), maxShares / 2));
+
+def numberOfShares = AbsValue(baseNumberOfShares);
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+#***********************************************************************
+
+#***********************************************************************
+#Begin Buy Order Section
+
+def purchasePrice = buyPrice + (ema2 - buyPrice);
+def exitPrice = if(sellPrice >= ema1, sellPrice - (sellPrice - ema1), sellPrice);
+
+def areEMAsStacked = ema1 > ema2 and ema2 > ema3 and ema3 > ema4 and ema4 > ema5 and ema5 > ema6;
+def meetsBuyLevel = (buyPrice[1] > ema1 within recentHighPeriod bars) and buyPrice[0] <= ema2 and buyPrice[0] > ema3;
+
+def buy = areEMAsStacked and meetsBuyLevel and isWithinTradingHours;
+
+AddOrder(condition = buy[-1], tradeSize = numberOfShares, price = purchasePrice[-1], tickColor = Color.LIME, arrowColor = Color.LIME, name = "StackedEMAPullbackStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + emaPeriod1 + ", " + emaPeriod2 + ", " + emaPeriod3 + ", " + emaPeriod4 + ", " + emaPeriod5 + ", " + hullMAPeriod + ", " + recentHighPeriod + "] BUY @" + purchasePrice[-1], type = OrderType.BUY_TO_OPEN);
+
+Alert(buy, "StackedEMAPullbackStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+
+#***********************************************************************
+#Begin Sell Order Section
+def isGain = exitPrice > EntryPrice();
+
+def percentGainLoss = ((exitPrice - EntryPrice()) / exitPrice) * 100;
+
+def cutLoss =  !isGain and sellPrice < ema3;
+
+def meetsHullRules = (hullMA[0] - hullMA[1] >= 0) and (hullMA[1] - hullMA[2] >= 0) and (hullMA[0] - hullMA[1] < hullMA[1] - hullMA[2]) or (hullMA[0] - hullMA[1] < 0);
+
+def meetsEMA1Rules = ((ema1[0] - ema1[1] > 0 and sellPrice < ema1) or (ema1[0] - ema1[1] <= 0));
+
+def sell = (isGain and (meetsEMA1Rules or meetsHullRules)) or cutLoss or (isWithinTradingHours[1] and !isWithinTradingHours);
+
+#AddChartBubble(buy, "price location" = HIGH, purchasePrice[-1] + "\n" + (ema2[-1] - buyPrice[-1]));
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell[-1] and isGain, price = exitPrice[-1], tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "StackedEMAPullbackStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + emaPeriod1 + ", " + emaPeriod2 + ", " + emaPeriod3 + ", " + emaPeriod4 + ", " + emaPeriod5 + ", " + hullMAPeriod + ", " + recentHighPeriod + "] SELL " + numberOfShares + " @" + exitPrice[-1] + " P/L%: " + percentGainLoss );
+
+AddOrder( OrderType.SELL_TO_CLOSE, sell[-1] and !isGain, price = exitPrice[-1], tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "StackedEMAPullbackStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + emaPeriod1 + ", " + emaPeriod2 + ", " + emaPeriod3 + ", " + emaPeriod4 + ", " + emaPeriod5 + ", " + hullMAPeriod + ", " + recentHighPeriod + "] SELL " + numberOfShares + " @" + exitPrice[-1] + " P/L%: " + percentGainLoss );
