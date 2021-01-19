@@ -1,0 +1,49 @@
+#Stacked EMA Pullback Strategy Column
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 01/18/2021
+
+input includePremarket = yes;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+#Begin Strategy Specific Inputs
+input emaPeriod1 = 8;
+input emaPeriod2 = 21;
+input emaPeriod3 = 34;
+input emaPeriod4 = 55;
+input emaPeriod5 = 84;
+input emaPeriod6 = 200;
+input hullMAPeriod = 6;
+
+input recentHighPeriod = 5;
+
+def buyPrice = low; 
+def sellPrice = high;
+#End Strategy Specific Inputs
+
+#***********************************************************************
+#Begin Strategy specific code
+
+def ema1 = MovAvgExponential(length = emaPeriod1);
+def ema2 = MovAvgExponential(length = emaPeriod2);
+def ema3 = MovAvgExponential(length = emaPeriod3);
+def ema4 = MovAvgExponential(length = emaPeriod4);
+def ema5 = MovAvgExponential(length = emaPeriod5);
+def ema6 = MovAvgExponential(length = emaPeriod6);
+
+#***********************************************************************
+#Begin Buy Order Section
+
+def purchasePrice = buyPrice + (ema2 - buyPrice);
+def exitPrice = if(sellPrice >= ema1, sellPrice - (sellPrice - ema1), sellPrice);
+
+def areEMAsStacked = ema1 > ema2 and ema2 > ema3 and ema3 > ema4 and ema4 > ema5 and ema5 > ema6;
+def meetsBuyLevel = (buyPrice[1] > ema1 within recentHighPeriod bars) and buyPrice[0] <= ema2 and buyPrice[0] > ema3;
+
+def buy = areEMAsStacked and meetsBuyLevel and isWithinTradingHours;
+
+AddLabel(buy, "Buy", color = Color.GREEN);
+
+AddLabel(!buy, "  ", color = Color.GREEN);
+
