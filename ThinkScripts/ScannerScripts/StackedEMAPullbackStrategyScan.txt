@@ -31,7 +31,6 @@ def ema3 = MovAvgExponential(length = emaPeriod3);
 def ema4 = MovAvgExponential(length = emaPeriod4);
 def ema5 = MovAvgExponential(length = emaPeriod5);
 def ema6 = MovAvgExponential(length = emaPeriod6);
-def hullMA = HullMovingAvg(length = hullMAPeriod);
 
 #***********************************************************************
 #Begin Buy Order Section
