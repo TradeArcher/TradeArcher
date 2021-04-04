@@ -1,0 +1,357 @@
+#Squeeze Pro Swing Long Daily Strategy
+#Author: TradeArcher2020
+#Version: 2.0
+#Date Created: 11/07/2020
+
+#Begin ALMA Script
+script ALMA {
+# Attributed to Miket
+# https://tos.mx/9mznij
+# https://usethinkscript.com/threads/alma-arnaud-legoux-ma-indicator-for-thinkorswim.174/
+input Data = close;
+input Window = 9;
+input Sigma = 6;
+input Offset = 0.85;
+
+def m = (Offset * (Window - 1));
+def s = Window/Sigma;
+
+def SumVectorData = fold y = 0 to Window with WS do WS + Exp(-(sqr(y-m))/(2*sqr(s))) * getvalue(Data, (Window-1)-y);
+def SumVector = fold z = 0 to Window with CW do CW + Exp(-(sqr(z-m))/(2*sqr(s)));
+
+plot ALMA = SumVectorData / SumVector;
+}
+#End ALMA Script
+
+#Begin MovAveConcavityTurnPoints Script
+script MovAveConcavityTurnPoints {
+
+#
+# Multiple Moving Average Concavity and Turning Points
+#  or
+# The Second Derivative of the A Moving Average
+#
+# via useThinkScript
+# request from chillc15
+# Added Arnaud Legoux MA and other Moving Averages
+#
+# Author: Seth Urion (Mahsume)
+# Version: 2020-02-22 V2
+#
+# This code is licensed (as applicable) under the GPL v3
+#
+# ----------------------
+
+input price = HL2;
+input MA_Length = 21;
+input lookback = 2;
+
+input MAType = {default "HMA", "EMA", "SMA", "WMA", "ALMA"};
+
+plot MA;
+switch (MAType) {
+case EMA:
+    MA = MovAvgExponential(price, length = MA_Length);
+case SMA:
+    MA = simpleMovingAvg(price, length = MA_Length);
+case WMA:
+    MA = wma(price, length = MA_Length);
+case ALMA:
+    MA = ALMA(Data = price, window = MA_Length);
+default:
+    MA = HullMovingAvg(price = price, length = MA_Length);
+}
+
+
+def delta = MA[1] - MA[lookback + 1];
+def delta_per_bar = delta / lookback;
+
+def next_bar = MA[1] + delta_per_bar;
+
+def concavity = if MA > next_bar then 1 else -1;
+
+plot turning_point = if concavity[-1] != concavity then MA else double.nan;
+
+MA.AssignValueColor(color = if concavity == -1 then
+    if MA > MA[1] then color.dark_orange else color.red else
+    if MA < MA[1] then color.dark_green else color.green);
+
+MA.SetLineWeight(3);
+
+turning_point.SetLineWeight(4);
+turning_point.SetPaintingStrategy(paintingStrategy = PaintingStrategy.POINTS);
+turning_point.SetDefaultColor(color.white);
+
+plot MA_Max = if MA[-1] < MA and MA > MA[1] then MA else Double.NaN;
+MA_Max.SetDefaultColor(Color.WHITE);
+MA_Max.SetPaintingStrategy(PaintingStrategy.SQUARES);
+MA_Max.SetLineWeight(3);
+
+plot MA_Min = if MA[-1] > MA and MA < MA[1] then MA else Double.Nan;
+MA_Min.SetDefaultColor(Color.WHITE);
+MA_Min.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+MA_Min.SetLineWeight(3);
+
+plot sell = if turning_point and concavity == 1 then high else double.nan;
+sell.SetDefaultColor(Color.DARK_ORANGE);
+sell.SetPaintingStrategy(PaintingStrategy.ARROW_DOWN);
+sell.SetLineWeight(3);
+
+plot buy = if turning_point and concavity == -1 then low else double.nan;
+buy.SetDefaultColor(Color.CYAN);
+buy.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+buy.SetLineWeight(3);
+
+def divergence = MA - next_bar;
+
+#Upper Label Colors:
+#these are useful for getting ready to enter a trade, or exit a trade and serve #as warnings that a turning point may be reached soon
+#Green: Concave up and divergence (the distance from the expected HMA value to the actual HMA value is increasing). That is, we're moving away from a 2nd derivative zero crossover.
+#Yellow: Concave up but the divergence is decreasing (heading toward a 2nd derivative zero crossover); it may soon be time to exit the trade.
+#Red: Concave down and the absolute value of the divergence is increasing (moving away from crossover)
+#Pink: Concave down but approaching a zero crossover from below (remember that is the entry signal, so pink means 'get ready').
+plot divergenceSignalStrength = 
+if (concavity < 0) then 
+    if (divergence[1] > divergence) then 
+        -2 
+    else 
+        -1 
+else 
+    if divergence[1] < divergence then 
+        2 
+    else 
+        1;
+divergenceSignalStrength.Hide();
+
+AddLabel(yes, concat("DIVERGENCE: " , divergence), color = if divergenceSignalStrength == -2 then Color.RED else if divergenceSignalStrength == -1 then color.PINK else if divergenceSignalStrength == 2 then color.green else if divergenceSignalStrength == 1 then color.yellow else color.Black);
+
+}
+#End MovAveConcavityTurnPoints Script
+
+#Begin MADevMeanReversion Script
+script MADevMeanReversion {
+
+input MovingAverageType = {default "HMA", "EMA", "SMA", "WMA", "ALMA"};
+input MALength = 21;
+input ShortMALength = 8;
+input MAPrice = HL2;
+input BBDeviation = 2.0;
+input ExpDevBandDeviation1 = 1.5;
+input ExpDevBandDeviation2 = 2.0;
+input ExpDevBandDeviation3 = 2.5;
+input BBExpDevBandMAType = {"HMA", default "EMA", "SMA", "WMA", "ALMA"};
+input DivergenceFactor = 1.0;
+
+def bbMiddle = BollingerBands(length = MALength, "average type" = "EXPONENTIAL", "num dev dn" = -BBDeviation, "num dev up" = BBDeviation);
+def bbLower = BollingerBands(length = MALength, "average type" = "EXPONENTIAL", "num dev dn" = -BBDeviation, "num dev up" = BBDeviation).LowerBand;
+def bbUpper = BollingerBands(length = MALength, "average type" = "EXPONENTIAL", "num dev dn" = -BBDeviation, "num dev up" = BBDeviation).UpperBand;
+
+plot edb1Lower = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation1, "num dev up" = ExpDevBandDeviation1).LowerBand;
+edb1Lower.Hide();
+plot edb1Upper = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation1, "num dev up" = ExpDevBandDeviation1);
+edb1Upper.Hide();
+
+plot edb2Middle = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation2, "num dev up" = ExpDevBandDeviation2).MidLine;
+edb2Middle.Hide();
+plot edb2Lower = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation2, "num dev up" = ExpDevBandDeviation2).LowerBand;
+edb2Lower.Hide();
+plot edb2Upper = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation2, "num dev up" = ExpDevBandDeviation2);
+edb2Upper.Hide();
+
+plot edb3Lower = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation3, "num dev up" = ExpDevBandDeviation3).LowerBand;
+edb3Lower.Hide();
+plot edb3Upper = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation3, "num dev up" = ExpDevBandDeviation3);
+edb3Upper.Hide();
+
+def bb_edb_middle_divergence = AbsValue(edb2Middle - bbMiddle);
+def bb_edb_lower_divergence = AbsValue(edb2Lower - bbLower);
+def bb_edb_upper_divergence = AbsValue(bbUpper - edb2Upper);
+
+def middleDivergenceMA;
+switch (BBExpDevBandMAType) {
+case EMA:
+    middleDivergenceMA = MovAvgExponential(bb_edb_middle_divergence, length = MALength);
+case SMA:
+    middleDivergenceMA = simpleMovingAvg(bb_edb_middle_divergence, length = MALength);
+case WMA:
+    middleDivergenceMA = wma(bb_edb_middle_divergence, length = MALength);
+case ALMA:
+    middleDivergenceMA = ALMA(Data = bb_edb_middle_divergence, window = MALength);
+default:
+    middleDivergenceMA = HullMovingAvg(price = bb_edb_middle_divergence, length = MALength);
+}
+
+def lowerDivergenceMA;
+switch (BBExpDevBandMAType) {
+case EMA:
+    lowerDivergenceMA = MovAvgExponential(bb_edb_lower_divergence, length = MALength);
+case SMA:
+    lowerDivergenceMA = simpleMovingAvg(bb_edb_lower_divergence, length = MALength);
+case WMA:
+    lowerDivergenceMA = wma(bb_edb_lower_divergence, length = MALength);
+case ALMA:
+    lowerDivergenceMA = ALMA(Data = bb_edb_lower_divergence, window = MALength);
+default:
+    lowerDivergenceMA = HullMovingAvg(price = bb_edb_lower_divergence, length = MALength);
+}
+
+def upperDivergenceMA;
+switch (BBExpDevBandMAType) {
+case EMA:
+    upperDivergenceMA = MovAvgExponential(bb_edb_upper_divergence, length = MALength);
+case SMA:
+    upperDivergenceMA = simpleMovingAvg(bb_edb_upper_divergence, length = MALength);
+case WMA:
+    upperDivergenceMA = wma(bb_edb_upper_divergence, length = MALength);
+case ALMA:
+    upperDivergenceMA = ALMA(Data = bb_edb_upper_divergence, window = MALength);
+default:
+    upperDivergenceMA = HullMovingAvg(price = bb_edb_upper_divergence, length = MALength);
+}
+
+def middleDivSignal = bb_edb_middle_divergence * DivergenceFactor < middleDivergenceMA;
+def lowerDivSignal = bb_edb_lower_divergence * DivergenceFactor < lowerDivergenceMA;
+def upperDivSignal = bb_edb_upper_divergence * DivergenceFactor < upperDivergenceMA;
+
+def hullMACCTPBuySignal = MovAveConcavityTurnPoints(MA_Length = ShortMALength, MAType = MovingAverageType, price = MAPrice).buy;
+def hullMACCTPSellSignal = MovAveConcavityTurnPoints(MA_Length = ShortMALength, MAType = MovingAverageType, price = MAPrice).sell;
+def hullMACCTPMax = MovAveConcavityTurnPoints(MA_Length = ShortMALength, MAType = MovingAverageType, price = MAPrice).MA_Max;
+def hullMACCTPMin = MovAveConcavityTurnPoints(MA_Length = ShortMALength, MAType = MovingAverageType, price = MAPrice).MA_Min;
+
+def mark = close(priceType = PriceType.MARK);
+def lowerPriceSignal = low < edb1Lower;
+def upperPriceSignal = high > edb1Upper;
+
+plot buySignal = (lowerDivSignal and lowerPriceSignal) and (!IsNaN(hullMACCTPBuySignal) or !IsNaN(hullMACCTPMin));
+buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buySignal.SetDefaultColor(Color.LIME);
+
+plot sellShortSignal = upperDivSignal and upperPriceSignal and (!IsNaN(hullMACCTPSellSignal) or !IsNaN(hullMACCTPMax));
+sellShortSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+sellShortSignal.SetDefaultColor(Color.DARK_RED);
+
+plot sellLongSignal = (middleDivSignal or (edb2Middle >= bbMiddle and edb2Middle[1] < bbMiddle[1])) and (!IsNaN(hullMACCTPSellSignal) or !IsNaN(hullMACCTPMax));
+sellLongSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+sellLongSignal.SetDefaultColor(Color.LIGHT_GREEN);
+
+plot buyToCoverSignal = (middleDivSignal or (bbMiddle >= edb2Middle and bbMiddle[1] < edb2Middle[1])) and (!IsNaN(hullMACCTPBuySignal) or !IsNaN(hullMACCTPMin));
+buyToCoverSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buyToCoverSignal.SetDefaultColor(Color.LIGHT_RED);
+
+plot longStoplossSignal = mark < edb3Lower;
+longStoplossSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+longStoplossSignal.SetDefaultColor(Color.DARK_ORANGE);
+
+plot shortStoplossSignal = mark > edb3Upper;
+shortStoplossSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+shortStoplossSignal.SetDefaultColor(Color.DARK_GREEN);
+
+}
+#End MADevMeanReversion Script
+
+input accountSize = 50000;
+input accountPercent = 10;
+input maxShares = 1000;
+input minAverageVolumeForFullSize = 75000;
+input avgVolPeriod = 5;
+
+input includePremarket = no;
+
+def isWithinTradingHours = If (GetAggregationPeriod() >= AggregationPeriod.DAY, yes, If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime()));
+
+#Begin Strategy Specific Inputs
+input MAT = {default "HMA", "EMA", "SMA", "WMA", "ALMA"};
+input MALen = 21;
+input ShortMALen = 8;
+input MAPriceType = {"High", "Low", "Open", "Close", default "HL2", "HLC3", "OHLC4", "VWAP"};
+input BBDev = 2.0;
+input ExpDevBandDev1 = 1.5;
+input ExpDevBandDev2 = 2.0;
+input ExpDevBandDev3 = 2.5;
+input BBExpDevBandMAT = {"HMA", default "EMA", "SMA", "WMA", "ALMA"};
+input DivFactor = 1.0;
+#End Strategy Specific Inputs
+
+#***********************************************************************
+#Begin Strategy specific code
+
+
+def maPrc;
+switch (MAPriceType) {
+    case "High":
+        maPrc = high;
+    case "Low":
+        maPrc = low;
+    case "Open":
+        maPrc = open;
+    case "Close":
+        maPrc = close;
+    case "HL2":
+        maPrc = HL2;
+    case "HLC3":
+        maPrc = HLC3;
+    case "OHLC4":
+        maPrc = OHLC4;
+    case "VWAP":
+        maPrc = vwap;
+}
+
+def madmrBuySignal = MADevMeanReversion(MAT, MALen, ShortMALen, MAPrc, BBDev, ExpDevBandDev1, ExpDevBandDev2, ExpDevBandDev3, BBExpDevBandMAT, DivFactor).buySignal;
+def madmrSellLongSignal = MADevMeanReversion(MAT, MALen, ShortMALen, MAPrc, BBDev, ExpDevBandDev1, ExpDevBandDev2, ExpDevBandDev3, BBExpDevBandMAT, DivFactor).sellLongSignal;
+
+def madmrEDB1Lower = MADevMeanReversion(MAT, MALen, ShortMALen, MAPrc, BBDev, ExpDevBandDev1, ExpDevBandDev2, ExpDevBandDev3, BBExpDevBandMAT, DivFactor).edb1Lower;
+def madmrEDB3Lower = MADevMeanReversion(MAT, MALen, ShortMALen, MAPrc, BBDev, ExpDevBandDev1, ExpDevBandDev2, ExpDevBandDev3, BBExpDevBandMAT, DivFactor).edb3Lower;
+
+def stoplossLevel = if(madmrBuySignal, madmrEDB3Lower, stoplossLevel[1]);
+
+def upperPriceLevel = if(high > madmrEDB1Lower, high, madmrEDB1Lower);
+def lowerPriceLevel = if(low < madmrEDB3Lower, madmrEDB3Lower, low);
+def purchasePrice = (upperPriceLevel + lowerPriceLevel) / 2;
+
+#***********************************************************************
+#Calculate boilerplate minimum volume, premarket and share size variables
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / purchasePrice, numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / purchasePrice, numberOfDigits = 0 ), maxShares / 2));
+
+def numberOfShares = AbsValue(baseNumberOfShares);
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+#***********************************************************************
+#Begin Buy Order Section
+def exitPrice = (high + low) / 2;
+
+def buyOrder = madmrBuySignal and isWithinTradingHours;
+
+#AddChartBubble(buyOrder within 3 bars, HIGH, "Stoploss Price: " +  stoplossLevel);
+
+AddOrder(condition = buyOrder[-1], tradeSize = numberOfShares, price = purchasePrice[-1], tickColor = Color.LIME, arrowColor = Color.LIME, name = "MADevMeanReversionLongStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MAT + ", " + MALen + ", " + ShortMALen + ", " + MAPriceType + ", " + BBDev + ", " + ExpDevBandDev1 + ", " + ExpDevBandDev2 + ", " + ExpDevBandDev3  + ", " + BBExpDevBandMAT + ", " + DivFactor + "] BUY @" + purchasePrice[-1], type = OrderType.BUY_TO_OPEN);
+
+Alert(buyOrder, "MADevMeanReversionLongStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+
+#***********************************************************************
+#Begin Sell Order Section
+def isGain = exitPrice > EntryPrice();
+
+def percentGainLoss = ((exitPrice - EntryPrice()) / exitPrice) * 100;
+
+def cutLoss =  !isGain and (low < madmrEDB3Lower);
+
+def meetsTakeProfitRules = madmrSellLongSignal;
+
+def sellOrder = (isGain and meetsTakeProfitRules) or cutLoss or (isWithinTradingHours[1] and !isWithinTradingHours);
+
+AddOrder( OrderType.SELL_TO_CLOSE, sellOrder[-1] and isGain, price = exitPrice[-1], tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "MADevMeanReversionLongStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MAT + ", " + MALen + ", " + ShortMALen + ", " + MAPriceType + ", " + BBDev + ", " + ExpDevBandDev1 + ", " + ExpDevBandDev2 + ", " + ExpDevBandDev3  + ", " + BBExpDevBandMAT + ", " + DivFactor + "] SELL " + numberOfShares + " @" + exitPrice[-1] + " P/L%: " + percentGainLoss );
+
+AddOrder( OrderType.SELL_TO_CLOSE, sellOrder[-1] and !isGain, price = exitPrice[-1], tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "MADevMeanReversionLongStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MAT + ", " + MALen + ", " + ShortMALen + ", " + MAPriceType + ", " + BBDev + ", " + ExpDevBandDev1 + ", " + ExpDevBandDev2 + ", " + ExpDevBandDev3  + ", " + BBExpDevBandMAT + ", " + DivFactor + "] SELL " + numberOfShares + " @" + exitPrice[-1] + " P/L%: " + percentGainLoss );
+

@@ -1,0 +1,169 @@
+
+input MovingAverageType = {default "HMA", "EMA", "SMA", "WMA", "ALMA"};
+input MALength = 21;
+input ShortMALength = 8;
+input MAPrice = HL2;
+input BBDeviation = 2.0;
+input ExpDevBandDeviation1 = 1.5;
+input ExpDevBandDeviation2 = 2.0;
+input ExpDevBandDeviation3 = 2.5;
+input BBExpDevBandMAType = {"HMA", default "EMA", "SMA", "WMA", "ALMA"};
+input DivergenceFactor = 1.0;
+
+script ALMA {
+# Attributed to Miket
+# https://tos.mx/9mznij
+# https://usethinkscript.com/threads/alma-arnaud-legoux-ma-indicator-for-thinkorswim.174/
+input Data = close;
+input Window = 9;
+input Sigma = 6;
+input Offset = 0.85;
+
+def m = (Offset * (Window - 1));
+def s = Window/Sigma;
+
+def SumVectorData = fold y = 0 to Window with WS do WS + Exp(-(sqr(y-m))/(2*sqr(s))) * getvalue(Data, (Window-1)-y);
+def SumVector = fold z = 0 to Window with CW do CW + Exp(-(sqr(z-m))/(2*sqr(s)));
+
+plot ALMA = SumVectorData / SumVector;
+}
+
+script MovAveConcavityTurnPoints {
+
+#
+# Multiple Moving Average Concavity and Turning Points
+#  or
+# The Second Derivative of the A Moving Average
+#
+# via useThinkScript
+# request from chillc15
+# Added Arnaud Legoux MA and other Moving Averages
+#
+# Author: Seth Urion (Mahsume)
+# Version: 2020-02-22 V2
+#
+# This code is licensed (as applicable) under the GPL v3
+#
+# ----------------------
+
+input price = HL2;
+input MA_Length = 21;
+input lookback = 2;
+
+input MAType = {default "HMA", "EMA", "SMA", "WMA", "ALMA"};
+
+plot MA;
+switch (MAType) {
+case EMA:
+    MA = MovAvgExponential(price, length = MA_Length);
+case SMA:
+    MA = simpleMovingAvg(price, length = MA_Length);
+case WMA:
+    MA = wma(price, length = MA_Length);
+case ALMA:
+    MA = ALMA(Data = price, window = MA_Length);
+default:
+    MA = HullMovingAvg(price = price, length = MA_Length);
+}
+
+
+def delta = MA[1] - MA[lookback + 1];
+def delta_per_bar = delta / lookback;
+
+def next_bar = MA[1] + delta_per_bar;
+
+def concavity = if MA > next_bar then 1 else -1;
+
+plot turning_point = if concavity[-1] != concavity then MA else double.nan;
+
+MA.AssignValueColor(color = if concavity == -1 then
+    if MA > MA[1] then color.dark_orange else color.red else
+    if MA < MA[1] then color.dark_green else color.green);
+
+MA.SetLineWeight(3);
+
+turning_point.SetLineWeight(4);
+turning_point.SetPaintingStrategy(paintingStrategy = PaintingStrategy.POINTS);
+turning_point.SetDefaultColor(color.white);
+
+plot MA_Max = if MA[-1] < MA and MA > MA[1] then MA else Double.NaN;
+MA_Max.SetDefaultColor(Color.WHITE);
+MA_Max.SetPaintingStrategy(PaintingStrategy.SQUARES);
+MA_Max.SetLineWeight(3);
+
+plot MA_Min = if MA[-1] > MA and MA < MA[1] then MA else Double.Nan;
+MA_Min.SetDefaultColor(Color.WHITE);
+MA_Min.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+MA_Min.SetLineWeight(3);
+
+plot sell = if turning_point and concavity == 1 then high else double.nan;
+sell.SetDefaultColor(Color.DARK_ORANGE);
+sell.SetPaintingStrategy(PaintingStrategy.ARROW_DOWN);
+sell.SetLineWeight(3);
+
+plot buy = if turning_point and concavity == -1 then low else double.nan;
+buy.SetDefaultColor(Color.CYAN);
+buy.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+buy.SetLineWeight(3);
+
+def divergence = MA - next_bar;
+
+#Upper Label Colors:
+#these are useful for getting ready to enter a trade, or exit a trade and serve #as warnings that a turning point may be reached soon
+#Green: Concave up and divergence (the distance from the expected HMA value to the actual HMA value is increasing). That is, we're moving away from a 2nd derivative zero crossover.
+#Yellow: Concave up but the divergence is decreasing (heading toward a 2nd derivative zero crossover); it may soon be time to exit the trade.
+#Red: Concave down and the absolute value of the divergence is increasing (moving away from crossover)
+#Pink: Concave down but approaching a zero crossover from below (remember that is the entry signal, so pink means 'get ready').
+plot divergenceSignalStrength = 
+if (concavity < 0) then 
+    if (divergence[1] > divergence) then 
+        -2 
+    else 
+        -1 
+else 
+    if divergence[1] < divergence then 
+        2 
+    else 
+        1;
+divergenceSignalStrength.Hide();
+
+AddLabel(yes, concat("DIVERGENCE: " , divergence), color = if divergenceSignalStrength == -2 then Color.RED else if divergenceSignalStrength == -1 then color.PINK else if divergenceSignalStrength == 2 then color.green else if divergenceSignalStrength == 1 then color.yellow else color.Black);
+
+}
+
+
+def bbLower = BollingerBands(length = MALength, "average type" = "EXPONENTIAL", "num dev dn" = -BBDeviation, "num dev up" = BBDeviation).LowerBand;
+
+def edb1Lower = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation1, "num dev up" = ExpDevBandDeviation1).LowerBand;
+
+def edb2Lower = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation2, "num dev up" = ExpDevBandDeviation2).LowerBand;
+
+def edb3Lower = ExponentialDeviationBands(length = MALength, "num dev dn" = -ExpDevBandDeviation3, "num dev up" = ExpDevBandDeviation3).LowerBand;
+
+def bb_edb_lower_divergence = AbsValue(edb2Lower - bbLower);
+
+def lowerDivergenceMA;
+switch (BBExpDevBandMAType) {
+case EMA:
+    lowerDivergenceMA = MovAvgExponential(bb_edb_lower_divergence, length = MALength);
+case SMA:
+    lowerDivergenceMA = simpleMovingAvg(bb_edb_lower_divergence, length = MALength);
+case WMA:
+    lowerDivergenceMA = wma(bb_edb_lower_divergence, length = MALength);
+case ALMA:
+    lowerDivergenceMA = ALMA(Data = bb_edb_lower_divergence, window = MALength);
+default:
+    lowerDivergenceMA = HullMovingAvg(price = bb_edb_lower_divergence, length = MALength);
+}
+
+
+def lowerDivSignal = bb_edb_lower_divergence * DivergenceFactor < lowerDivergenceMA;
+
+
+def hullMACCTPBuySignal = MovAveConcavityTurnPoints(MA_Length = ShortMALength, MAType = MovingAverageType, price = MAPrice).buy;
+
+def hullMACCTPMin = MovAveConcavityTurnPoints(MA_Length = ShortMALength, MAType = MovingAverageType, price = MAPrice).MA_Min;
+
+def lowerPriceSignal = low < edb1Lower;
+
+plot buySignal = (lowerDivSignal and lowerPriceSignal) and (!IsNaN(hullMACCTPBuySignal) or !IsNaN(hullMACCTPMin)) within 2 bars;
