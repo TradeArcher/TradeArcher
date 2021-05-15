@@ -1,0 +1,96 @@
+#Multi-Timeframe Higher High Higher Low Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 2/15/2021
+
+input TimeFrame = {default CURRENT, MIN, TWOMIN, THREEMIN, FOURMIN, FIVEMIN, TENMIN, FIFTEENMIN, TWENTYMIN, THIRTYMIN, HOUR, TWOHOURS, THREEHOURS, FOURHOURS, DAY, TWODAYS, THREEDAYS, FOURDAYS, WEEK, MONTH, QUARTER, YEAR};
+input MinVolume = 50000;
+input MinVolumeLookback = 5;
+input ShowHHHLPlotsWithoutVolume = no;
+
+def aggPeriod;
+switch (TimeFrame) {
+    case MIN:
+        aggPeriod = AggregationPeriod.MIN;
+    case TWOMIN:
+        aggPeriod = AggregationPeriod.TWO_MIN;
+    case THREEMIN:
+        aggPeriod = AggregationPeriod.THREE_MIN;
+    case FOURMIN:
+        aggPeriod = AggregationPeriod.FOUR_MIN;
+    case FIVEMIN:
+        aggPeriod = AggregationPeriod.FIVE_MIN;
+    case TENMIN:
+        aggPeriod = AggregationPeriod.TEN_MIN;
+    case FIFTEENMIN:
+        aggPeriod = AggregationPeriod.FIFTEEN_MIN;
+    case TWENTYMIN:
+        aggPeriod = AggregationPeriod.TWENTY_MIN;
+    case THIRTYMIN:
+        aggPeriod = AggregationPeriod.THIRTY_MIN;
+    case HOUR:
+        aggPeriod = AggregationPeriod.HOUR;
+    case TWOHOURS:
+        aggPeriod = AggregationPeriod.TWO_HOURS;
+    case FOURHOURS:
+        aggPeriod = AggregationPeriod.FOUR_HOURS;
+    case DAY:
+        aggPeriod = AggregationPeriod.DAY;
+    case TWODAYS:
+        aggPeriod = AggregationPeriod.TWO_DAYS;
+    case THREEDAYS:
+        aggPeriod = AggregationPeriod.THREE_DAYS;
+    case FOURDAYS:
+        aggPeriod = AggregationPeriod.FOUR_DAYS;
+    case WEEK:
+        aggPeriod = AggregationPeriod.WEEK;
+    case MONTH:
+        aggPeriod = AggregationPeriod.MONTH;
+    case QUARTER:
+        aggPeriod = AggregationPeriod.QUARTER;
+    case YEAR:
+        aggPeriod = AggregationPeriod.YEAR;
+    default:
+        aggPeriod = GetAggregationPeriod();
+}
+
+#we do this to prevent error when trying to plot a lower timeFrame since that is not supported
+def timePeriod = if(aggPeriod < GetAggregationPeriod(), GetAggregationPeriod(), aggPeriod);
+
+def candleHigh = high(period = timePeriod);
+def candleLow = low(period = timePeriod);
+
+def peak = if(candleHigh >= candleHigh[-1] and candleHigh >= candleHigh[1], candleHigh, peak[1]);
+def trough = if(candleLow <= candleLow[-1] and candleLow <= candleLow[1], candleLow, trough[1]);
+
+#plot lastPeak = peak;
+#lastPeak.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+#lastPeak.SetDefaultColor(Color.Green);
+
+#plot lastTrough = trough;
+#lastTrough.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+#lastTrough.SetDefaultColor(Color.RED);
+
+def meetsMinVolume = fold ix = 1 to MinVolumeLookback with value = yes while value do if GetValue(volume, ix) >= MinVolume then yes else no;
+
+def lastHH = if(peak > lastHH[1] or candleLow < trough, peak, lastHH[1]);
+
+plot HigherHigh = if(meetsMinVolume or ShowHHHLPlotsWithoutVolume, lastHH, Double.NaN);;
+HigherHigh.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+HigherHigh.SetDefaultColor(Color.CYAN);
+
+
+def lastHL = if(trough > lastHL[1] or candleLow < trough, trough, lastHL[1]);
+
+plot HigherLow = if(meetsMinVolume or ShowHHHLPlotsWithoutVolume, lastHL, Double.NaN);
+HigherLow.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+HigherLow.SetDefaultColor(Color.ORANGE);
+
+def prevHH = if(lastHH != lastHH[1], lastHH[1], prevHH[1]);
+
+def breakoutLevel = if(high > lastHH and low <= lastHH and lastHH > prevHH[1] and meetsMinVolume, lastHH, Double.NaN);
+
+plot breakoutSignal = breakoutLevel;
+breakoutSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+breakoutSignal.SetDefaultColor(Color.LIME);
+
