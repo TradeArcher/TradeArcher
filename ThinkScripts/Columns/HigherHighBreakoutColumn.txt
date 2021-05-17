@@ -1,0 +1,43 @@
+#Multi-Timeframe Higher High Higher Low Scan
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 5/17/2021
+
+input MinVolume = 500000;
+input MinVolumeLookback = 2;
+
+def candleHigh = high;
+def candleLow = low;
+
+def peak = if(candleHigh[1] >= candleHigh and candleHigh[1] >= candleHigh[2], candleHigh[1], peak[1]);
+def trough = if(candleLow[1] <= candleLow and candleLow[1] <= candleLow[2], candleLow[1], trough[1]);
+
+def meetsMinVolume = fold ix = 1 to MinVolumeLookback with value = yes while value do if GetValue(volume, ix) >= MinVolume then yes else no;
+
+def lastHH = if(peak > lastHH[1] or candleLow < trough, peak, lastHH[1]);
+
+def HigherHigh = if(meetsMinVolume, lastHH, Double.NaN);;
+
+#def lastHL = if(trough > lastHL[1] or candleLow < trough, trough, lastHL[1]);
+
+#def HigherLow = if(yes, lastHL, Double.NaN);
+
+def prevHH = if(lastHH != lastHH[1], lastHH[1], prevHH[1]);
+
+def breakoutSignal = if(high > lastHH and low <= lastHH and lastHH > prevHH[1] and meetsMinVolume, lastHH, Double.NaN);
+
+#def breakoutSignal = breakoutLevel;
+
+def preBreakout = (HigherHigh - (ATR() * .25));
+
+def meetsCriteria = (HigherHigh > close and close > preBreakout)
+or 
+((!IsNaN(breakoutSignal)) within 2 bars);
+
+#AddChartBubble("time condition" = meetsCriteria, "price location" = LOW, color = Color.WHITE, text = "BREAKOUT", up = No);
+
+Alert(meetsCriteria, "alert type" = Alert.BAR, sound = Sound.Chimes, text = Concat(GetSymbol(), " HH Breakout" ));
+
+AddLabel(meetsCriteria, "Y", color = Color.GREEN);
+
+AddLabel(!meetsCriteria, "  ");
