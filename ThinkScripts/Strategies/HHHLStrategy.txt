@@ -1,0 +1,239 @@
+#Higher High Higher Low Strategy
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 5/23/2021
+
+input accountSize = 50000;
+input accountPercent = 10;
+input maxShares = 1000;
+input minAverageVolumeForFullSize = 75000;
+input avgVolPeriod = 5;
+
+input includePremarket = no;
+
+def isWithinTradingHours = If (GetAggregationPeriod() >= AggregationPeriod.DAY, yes, If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime()));
+
+#Begin Strategy Specific Inputs
+
+input MaxATRStoplossFactor = 1.5;
+input ATRLength = 14;
+
+#End Strategy Specific Inputs
+
+
+#***********************************************************************
+#Begin Strategy specific code
+
+#Begin Indicator Code
+#Multi-Timeframe Higher High Higher Low Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 5/15/2021
+
+input TimeFrame = {default CURRENT, MIN, TWOMIN, THREEMIN, FOURMIN, FIVEMIN, TENMIN, FIFTEENMIN, TWENTYMIN, THIRTYMIN, HOUR, TWOHOURS, THREEHOURS, FOURHOURS, DAY, TWODAYS, THREEDAYS, FOURDAYS, WEEK, MONTH, QUARTER, YEAR};
+input MinVolume = 50000;
+input MinVolumeLookback = 5;
+input ShowHHHLPlotsWithoutVolume = no;
+#input MaxATRStoplossFactor = 1.5;
+
+def aggPeriod;
+switch (TimeFrame) {
+    case MIN:
+        aggPeriod = AggregationPeriod.MIN;
+    case TWOMIN:
+        aggPeriod = AggregationPeriod.TWO_MIN;
+    case THREEMIN:
+        aggPeriod = AggregationPeriod.THREE_MIN;
+    case FOURMIN:
+        aggPeriod = AggregationPeriod.FOUR_MIN;
+    case FIVEMIN:
+        aggPeriod = AggregationPeriod.FIVE_MIN;
+    case TENMIN:
+        aggPeriod = AggregationPeriod.TEN_MIN;
+    case FIFTEENMIN:
+        aggPeriod = AggregationPeriod.FIFTEEN_MIN;
+    case TWENTYMIN:
+        aggPeriod = AggregationPeriod.TWENTY_MIN;
+    case THIRTYMIN:
+        aggPeriod = AggregationPeriod.THIRTY_MIN;
+    case HOUR:
+        aggPeriod = AggregationPeriod.HOUR;
+    case TWOHOURS:
+        aggPeriod = AggregationPeriod.TWO_HOURS;
+    case FOURHOURS:
+        aggPeriod = AggregationPeriod.FOUR_HOURS;
+    case DAY:
+        aggPeriod = AggregationPeriod.DAY;
+    case TWODAYS:
+        aggPeriod = AggregationPeriod.TWO_DAYS;
+    case THREEDAYS:
+        aggPeriod = AggregationPeriod.THREE_DAYS;
+    case FOURDAYS:
+        aggPeriod = AggregationPeriod.FOUR_DAYS;
+    case WEEK:
+        aggPeriod = AggregationPeriod.WEEK;
+    case MONTH:
+        aggPeriod = AggregationPeriod.MONTH;
+    case QUARTER:
+        aggPeriod = AggregationPeriod.QUARTER;
+    case YEAR:
+        aggPeriod = AggregationPeriod.YEAR;
+    default:
+        aggPeriod = GetAggregationPeriod();
+}
+
+#we do this to prevent error when trying to plot a lower timeFrame since that is not supported
+def timePeriod = if(aggPeriod < GetAggregationPeriod(), GetAggregationPeriod(), aggPeriod);
+
+def bodyHigh = if(close(period = timePeriod) > open(period = timePeriod), close(period = timePeriod), open(period = timePeriod));
+def bodyLow = if(close(period = timePeriod) < open(period = timePeriod), close(period = timePeriod), open(period = timePeriod));
+def candleHigh = bodyHigh;
+def candleLow = bodyLow;
+
+def peak = if(candleHigh[1] >= candleHigh and candleHigh[1] >= candleHigh[2], candleHigh[1], peak[1]);
+def trough = if(candleLow[1] <= candleLow and candleLow[1] <= candleLow[2], candleLow[1], trough[1]);
+
+#def meetsMinVolume = fold ix = 1 to MinVolumeLookback with value = yes while value do if GetValue(volume, ix) >= MinVolume then yes else no;
+def meetsMinVolume = Average(volume[1], MinVolumeLookback) >= MinVolume;
+
+def lastHL = if((meetsMinVolume or ShowHHHLPlotsWithoutVolume) and IsNaN(lastHL[1]) or trough > lastHL[1] or trough < lastHL[1], trough, lastHL[1]);
+
+def lastHH = if((meetsMinVolume or ShowHHHLPlotsWithoutVolume) and IsNaN(lastHH[1]) or peak > lastHH[1] or peak < lastHH[1], peak, lastHH[1]);
+
+def prevHH = if(lastHH != lastHH[1] and lastHH > lastHH[1], lastHH[1], prevHH[1]);
+def prevHL = if(lastHL != lastHL[1] and lastHL > lastHL[1], lastHL[1], prevHL[1]);
+
+plot HigherHigh = if(lastHH > prevHH, lastHH, Double.NaN);
+HigherHigh.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+HigherHigh.SetDefaultColor(Color.CYAN);
+HigherHigh.SetLineWeight(2);
+
+plot HigherLow = if(lastHL > prevHL, lastHL, Double.NaN);
+HigherLow.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+HigherLow.SetDefaultColor(Color.ORANGE);
+HigherLow.SetLineWeight(2);
+
+def breakoutLevel = if(bodyHigh > lastHH and low <= lastHH and lastHH > prevHH[1] and meetsMinVolume, lastHH, Double.NaN);
+
+plot breakoutSignal = breakoutLevel;
+breakoutSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+breakoutSignal.SetDefaultColor(Color.LIME);
+
+def buy = if !IsNaN(HigherLow) 
+and open > HigherLow 
+and candleLow[1] == HigherLow 
+and !IsNaN(HigherHigh) 
+and open <= HigherHigh 
+and !IsNaN(HigherLow[1]) 
+and HigherLow[1] < HigherLow
+then 1 
+else 0;
+
+def buyBars = if(buy, BarNumber(), 0);
+def lastBuyBar = HighestAll(buyBars);
+
+def buyPrice = if(buy, open, if(IsNaN(buyPrice[1]), 0, buyPrice[1]));
+
+def takeProfits = !IsNaN(HigherHigh) and (IsNaN(HigherHigh[1]) or HigherHigh[1] < HigherHigh) and bodyHigh < HigherHigh and bodyHigh > prevHH and !buy;
+
+def takeProfitsBar = if(takeProfits and !takeProfits[1], BarNumber(), if(IsNaN(takeProfitsBar[1]), 0, takeProfitsBar[1]));
+
+def takeProfitsPrice = if(takeProfits, bodyHigh, Double.NaN);
+
+def maxStoplossPriceLevel = buyPrice - (ATR() * MaxATRStoplossFactor);
+
+def stopLoss = low < prevHH and bodyLow[1] > prevHH;
+def maxStopLoss = bodyLow < maxStoplossPriceLevel;
+def meetsStoploss = stoploss or maxStopLoss and !buy;
+
+def stopLossBar = if(meetsStoploss and !meetsStoploss[1], BarNumber(), if(IsNaN(stopLossBar[1]), 0, stopLossBar[1]));
+
+def stopLossPrice = if(meetsStoploss, if(open < prevHH, open, prevHH), Double.NaN);
+
+#DefineGlobalColor("Buy", Color.LIME);
+def buySignal = buy;
+#buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+#buySignal.SetDefaultColor(GlobalColor("Buy"));
+
+def buyPriceTarget = if(buySignal, buyPrice, Double.NaN);
+#buyPriceTarget.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+#buyPriceTarget.SetDefaultColor(GlobalColor("Buy"));
+#buyPriceTarget.SetLineWeight(2);
+
+#DefineGlobalColor("Stoploss", Color.DARK_RED);
+#DefineGlobalColor("MaxStoploss", Color.DARK_RED);
+#def stoplossSignal = meetsStoploss and stopLossBar != stopLossBar[1];
+#stoplossSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+#stoplossSignal.AssignValueColor(if stopLoss then GlobalColor("Stoploss") else GlobalColor("MaxStoploss"));
+
+#def stoplossPriceLevel = if(stoplossSignal, if(maxStopLoss, maxStoplossPriceLevel, stopLossPrice), Double.NaN);
+#stoplossPriceLevel.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+#stoplossPriceLevel.AssignValueColor(if stopLoss then GlobalColor("Stoploss") else GlobalColor("MaxStoploss"));
+#stoplossPriceLevel.SetLineWeight(2);
+
+
+#DefineGlobalColor("TakeProfits", Color.GREEN);
+def takeProfitsSignal = takeProfits and takeProfitsBar != takeProfitsBar[1];
+#takeProfitsSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+#takeProfitsSignal.SetDefaultColor(GlobalColor("TakeProfits"));
+
+def takeProfitsPriceLevel = if(takeProfitsSignal, takeProfitsPrice, Double.NaN);
+#takeProfitsPriceLevel.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+#takeProfitsPriceLevel.SetDefaultColor(GlobalColor("TakeProfits"));
+#takeProfitsPriceLevel.SetLineWeight(2);
+
+def purchasePrice = buyPriceTarget;
+
+def meetsBuyCriteria = buySignal;
+
+def meetsSellCriteria = takeProfitsSignal;
+
+#***********************************************************************
+#Calculate boilerplate minimum volume, premarket and share size variables
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / purchasePrice, numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / purchasePrice, numberOfDigits = 0 ), maxShares / 2));
+
+def numberOfShares = AbsValue(baseNumberOfShares);
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+#***********************************************************************
+#Begin Buy Order Section
+def exitPrice = open;
+
+def buyOrder = meetsBuyCriteria and isWithinTradingHours;
+
+
+AddOrder(condition = buyOrder, tradeSize = numberOfShares, price = purchasePrice, tickColor = Color.LIME, arrowColor = Color.LIME, name = "HHHLStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MaxATRStoplossFactor + ", " + ATRLength + ", " + TimeFrame + ", " + MinVolume + ", " + MinVolumeLookback + "] BUY @" + purchasePrice, type = OrderType.BUY_TO_OPEN);
+
+#Optional Buy Signal Alert
+#Alert(buyOrder, "HHHLStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+
+#***********************************************************************
+#Begin Sell Order Section
+def isGain = exitPrice > EntryPrice();
+
+def percentGainLoss = ((exitPrice - EntryPrice()) / exitPrice) * 100;
+
+def meetsStoplossCriteria = (close <= EntryPrice() - (ATR(ATRLength) * MaxATRStoplossFactor));
+
+def cutLoss =  !isGain and meetsStoplossCriteria;
+
+def sellOrder = (isGain and meetsSellCriteria) or cutLoss or (isWithinTradingHours[1] and !isWithinTradingHours);
+
+AddOrder( OrderType.SELL_TO_CLOSE, sellOrder and isGain, price = exitPrice, tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "HHHLStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MaxATRStoplossFactor + ", " + ATRLength + ", " + TimeFrame + ", " + MinVolume + ", " + MinVolumeLookback + "] SELL " + numberOfShares + " @" + exitPrice + " P/L%: " + percentGainLoss );
+
+AddOrder( OrderType.SELL_TO_CLOSE, sellOrder and !isGain, price = exitPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "HHHLStrategy[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MaxATRStoplossFactor + ", " + ATRLength + ", " + TimeFrame + ", " + MinVolume + ", " + MinVolumeLookback + "] SELL " + numberOfShares + " @" + exitPrice + " P/L%: " + percentGainLoss );
+
+#Optional Sell Signal Alert
+#Alert(sellOrder, "***StrategyName*** Sell Signal for " + GetSymbol(), sound = Sound.Ding);

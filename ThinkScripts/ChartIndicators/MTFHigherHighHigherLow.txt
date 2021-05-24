@@ -7,6 +7,7 @@ input TimeFrame = {default CURRENT, MIN, TWOMIN, THREEMIN, FOURMIN, FIVEMIN, TEN
 input MinVolume = 50000;
 input MinVolumeLookback = 5;
 input ShowHHHLPlotsWithoutVolume = no;
+input MaxATRStoplossFactor = 1.5;
 
 def aggPeriod;
 switch (TimeFrame) {
@@ -57,40 +58,108 @@ switch (TimeFrame) {
 #we do this to prevent error when trying to plot a lower timeFrame since that is not supported
 def timePeriod = if(aggPeriod < GetAggregationPeriod(), GetAggregationPeriod(), aggPeriod);
 
-def candleHigh = high(period = timePeriod);
-def candleLow = low(period = timePeriod);
+def bodyHigh = if(close(period = timePeriod) > open(period = timePeriod), close(period = timePeriod), open(period = timePeriod));
+def bodyLow = if(close(period = timePeriod) < open(period = timePeriod), close(period = timePeriod), open(period = timePeriod));
+def candleHigh = bodyHigh;
+def candleLow = bodyLow;
 
-def peak = if(candleHigh >= candleHigh[-1] and candleHigh >= candleHigh[1], candleHigh, peak[1]);
-def trough = if(candleLow <= candleLow[-1] and candleLow <= candleLow[1], candleLow, trough[1]);
+def peak = if(candleHigh[1] >= candleHigh and candleHigh[1] >= candleHigh[2], candleHigh[1], peak[1]);
+def trough = if(candleLow[1] <= candleLow and candleLow[1] <= candleLow[2], candleLow[1], trough[1]);
 
-#plot lastPeak = peak;
-#lastPeak.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
-#lastPeak.SetDefaultColor(Color.Green);
+#def meetsMinVolume = fold ix = 1 to MinVolumeLookback with value = yes while value do if GetValue(volume, ix) >= MinVolume then yes else no;
+def meetsMinVolume = Average(volume[1], MinVolumeLookback) >= MinVolume;
 
-#plot lastTrough = trough;
-#lastTrough.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
-#lastTrough.SetDefaultColor(Color.RED);
+def lastHL = if((meetsMinVolume or ShowHHHLPlotsWithoutVolume) and IsNaN(lastHL[1]) or trough > lastHL[1] or trough < lastHL[1], trough, lastHL[1]);
 
-def meetsMinVolume = fold ix = 1 to MinVolumeLookback with value = yes while value do if GetValue(volume, ix) >= MinVolume then yes else no;
+def lastHH = if((meetsMinVolume or ShowHHHLPlotsWithoutVolume) and IsNaN(lastHH[1]) or peak > lastHH[1] or peak < lastHH[1], peak, lastHH[1]);
 
-def lastHH = if(peak > lastHH[1] or candleLow < trough, peak, lastHH[1]);
+def prevHH = if(lastHH != lastHH[1] and lastHH > lastHH[1], lastHH[1], prevHH[1]);
+def prevHL = if(lastHL != lastHL[1] and lastHL > lastHL[1], lastHL[1], prevHL[1]);
 
-plot HigherHigh = if(meetsMinVolume or ShowHHHLPlotsWithoutVolume, lastHH, Double.NaN);;
+plot HigherHigh = if(lastHH > prevHH, lastHH, Double.NaN);
 HigherHigh.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
 HigherHigh.SetDefaultColor(Color.CYAN);
+HigherHigh.SetLineWeight(2);
 
-
-def lastHL = if(trough > lastHL[1] or candleLow < trough, trough, lastHL[1]);
-
-plot HigherLow = if(meetsMinVolume or ShowHHHLPlotsWithoutVolume, lastHL, Double.NaN);
+plot HigherLow = if(lastHL > prevHL, lastHL, Double.NaN);
 HigherLow.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
 HigherLow.SetDefaultColor(Color.ORANGE);
+HigherLow.SetLineWeight(2);
 
-def prevHH = if(lastHH != lastHH[1], lastHH[1], prevHH[1]);
-
-def breakoutLevel = if(high > lastHH and low <= lastHH and lastHH > prevHH[1] and meetsMinVolume, lastHH, Double.NaN);
+def breakoutLevel = if(bodyHigh > lastHH and low <= lastHH and lastHH > prevHH[1] and meetsMinVolume, lastHH, Double.NaN);
 
 plot breakoutSignal = breakoutLevel;
 breakoutSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
 breakoutSignal.SetDefaultColor(Color.LIME);
 
+def buy = if !IsNaN(HigherLow) 
+and open > HigherLow 
+and candleLow[1] == HigherLow 
+and !IsNaN(HigherHigh) 
+and open <= HigherHigh 
+and !IsNaN(HigherLow[1]) 
+and HigherLow[1] < HigherLow
+then 1 
+else 0;
+
+def buyBars = if(buy, BarNumber(), 0);
+def lastBuyBar = HighestAll(buyBars);
+
+def buyPrice = if(buy, open, if(IsNaN(buyPrice[1]), 0, buyPrice[1]));
+
+def takeProfits = !IsNaN(HigherHigh) and (IsNaN(HigherHigh[1]) or HigherHigh[1] < HigherHigh) and bodyHigh < HigherHigh and bodyHigh > prevHH and !buy;
+
+def takeProfitsBar = if(takeProfits and !takeProfits[1], BarNumber(), if(IsNaN(takeProfitsBar[1]), 0, takeProfitsBar[1]));
+
+def takeProfitsPrice = if(takeProfits, bodyHigh, Double.NaN);
+
+def maxStoplossPriceLevel = buyPrice - (ATR() * MaxATRStoplossFactor);
+
+def stopLoss = low < prevHH and bodyLow[1] > prevHH;
+def maxStopLoss = bodyLow < maxStoplossPriceLevel;
+def meetsStoploss = stoploss or maxStopLoss and !buy;
+
+def stopLossBar = if(meetsStoploss and !meetsStoploss[1], BarNumber(), if(IsNaN(stopLossBar[1]), 0, stopLossBar[1]));
+
+def stopLossPrice = if(meetsStoploss, if(open < prevHH, open, prevHH), Double.NaN);
+
+DefineGlobalColor("Buy", Color.LIME);
+plot buySignal = buy;
+buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buySignal.SetDefaultColor(GlobalColor("Buy"));
+
+plot buyPriceTarget = if(buySignal, buyPrice, Double.NaN);
+buyPriceTarget.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+buyPriceTarget.SetDefaultColor(GlobalColor("Buy"));
+buyPriceTarget.SetLineWeight(2);
+
+
+DefineGlobalColor("Stoploss", Color.DARK_RED);
+DefineGlobalColor("MaxStoploss", Color.DARK_RED);
+plot stoplossSignal = meetsStoploss and stopLossBar != stopLossBar[1];
+stoplossSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+stoplossSignal.AssignValueColor(if stopLoss then GlobalColor("Stoploss") else GlobalColor("MaxStoploss"));
+
+plot stoplossPriceLevel = if(stoplossSignal, if(maxStopLoss, maxStoplossPriceLevel, stopLossPrice), Double.NaN);
+stoplossPriceLevel.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+stoplossPriceLevel.AssignValueColor(if stopLoss then GlobalColor("Stoploss") else GlobalColor("MaxStoploss"));
+stoplossPriceLevel.SetLineWeight(2);
+
+
+DefineGlobalColor("TakeProfits", Color.GREEN);
+plot takeProfitsSignal = takeProfits and takeProfitsBar != takeProfitsBar[1];
+takeProfitsSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+takeProfitsSignal.SetDefaultColor(GlobalColor("TakeProfits"));
+
+plot takeProfitsPriceLevel = if(takeProfitsSignal, takeProfitsPrice, Double.NaN);
+takeProfitsPriceLevel.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+takeProfitsPriceLevel.SetDefaultColor(GlobalColor("TakeProfits"));
+takeProfitsPriceLevel.SetLineWeight(2);
+
+#AddChartBubble(
+#stopLoss
+#, HIGH, stopLossPrice, Color.LIGHT_RED);
+
+#AddChartBubble(
+#maxStopLoss
+#, HIGH, buyPrice + "\n" + GetValue(buyPrice, lastBuyBar) + "\n" + maxStoplossPriceLevel, Color.LIGHT_RED);

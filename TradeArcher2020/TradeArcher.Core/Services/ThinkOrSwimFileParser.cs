@@ -111,7 +111,7 @@ namespace TradeArcher.Core.Services
 
             var cultureInfo = new CultureInfo("en-US");
             cultureInfo.Calendar.TwoDigitYearMax = 2099;
-            return DateTime.ParseExact(text, Constants.SupportedDateFormats, cultureInfo, DateTimeStyles.None);
+            return DateTime.ParseExact(text.Replace(",", ""), Constants.SupportedDateFormats, cultureInfo, DateTimeStyles.None);
         }
     }
 
