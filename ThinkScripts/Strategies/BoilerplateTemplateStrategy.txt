@@ -1,0 +1,85 @@
+#Boilerplate Template Strategy
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 5/23/2021
+
+#This is a sample boilerplate strategy with some extra basic commonly desired functionality.  It includes examples of how to add inputs, add buy, sell, and stoploss orders.  It also includes some basic code to let you limit the size of the trades it takes based on your specified account size and minimum volume requirements.  This is a very simplist but functional strategy that uses bullish hammer candle as a buy signal and a shooting star candle as a sell signal with a default 1.5 ATR stoploss to the downside. 
+
+input accountSize = 50000;
+input accountPercent = 10;
+input maxShares = 1000;
+input minAverageVolumeForFullSize = 75000;
+input avgVolPeriod = 5;
+
+input includePremarket = no;
+
+def isWithinTradingHours = If (GetAggregationPeriod() >= AggregationPeriod.DAY, yes, If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime()));
+
+#Begin Strategy Specific Inputs
+
+#Example input:
+#input MovingAverageType = {default "HMA", "EMA", "SMA", "WMA", "ALMA"};
+
+input MaxATRStopplossFactor = 1.5;
+input ATRLength = 14;
+
+#End Strategy Specific Inputs
+
+#***********************************************************************
+#Begin Strategy specific code
+
+def purchasePrice = open;
+
+def meetsBuyCriteria = Hammer(); #Bullish Candle
+
+def meetsSellCriteria = ShootingStar(); #Bearish
+
+#***********************************************************************
+#Calculate boilerplate minimum volume, premarket and share size variables
+def hasMinVolume = VolumeAvg(length = avgVolPeriod) >= minAverageVolumeForFullSize;
+
+def baseNumberOfShares = If (hasMinVolume, Min(Round( (accountSize * accountPercent / 100) / purchasePrice, numberOfDigits = 0 ), maxShares), Min(Round( (accountSize * (accountPercent / 4) / 100) / purchasePrice, numberOfDigits = 0 ), maxShares / 2));
+
+def numberOfShares = AbsValue(baseNumberOfShares);
+
+def currentAggPeriod = GetAggregationPeriod();
+def aggPeriodType = 
+if currentAggPeriod >= AggregationPeriod.YEAR 
+then AggregationPeriod.YEAR
+else 
+    if currentAggPeriod >= AggregationPeriod.DAY  
+    then AggregationPeriod.DAY
+    else 
+        if currentAggPeriod >= AggregationPeriod.HOUR 
+        then AggregationPeriod.HOUR
+        else AggregationPeriod.MIN;
+#***********************************************************************
+#Begin Buy Order Section
+def exitPrice = open;
+
+def buyOrder = meetsBuyCriteria and isWithinTradingHours;
+
+#NOTE: Replace ***StrategyName*** in all places below with your strategy's name as well as remember to replace the inputs added to the order display name with whatever custom inputs you create. The naming pattern below allows you to have a unique name in your strategy reports depending on the chart time frame and the values you use for the inputs.  This allows you to import your strategy report data into a reporting/analyis program like a spreadsheet and the different settings or timeframes you use will not interfere with previous data using the same strategy with different settings.  
+AddOrder(condition = buyOrder, tradeSize = numberOfShares, price = purchasePrice, tickColor = Color.LIME, arrowColor = Color.LIME, name = "***StrategyName***[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MaxATRStopplossFactor + ", " + ATRLength + "] BUY @" + purchasePrice, type = OrderType.BUY_TO_OPEN);
+
+#Optional Buy Signal Alert
+Alert(buyOrder, "***StrategyName*** Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+
+#***********************************************************************
+#Begin Sell Order Section
+def isGain = exitPrice > EntryPrice();
+
+def percentGainLoss = ((exitPrice - EntryPrice()) / exitPrice) * 100;
+
+def meetsStoplossCriteria = (close <= EntryPrice() - (ATR(ATRLength) * MaxATRStopplossFactor));
+
+def cutLoss =  !isGain and meetsStoplossCriteria;
+
+def sellOrder = (isGain and meetsSellCriteria) or cutLoss or (isWithinTradingHours[1] and !isWithinTradingHours);
+
+AddOrder( OrderType.SELL_TO_CLOSE, sellOrder and isGain, price = exitPrice, tickColor = Color.UPTICK, arrowColor = Color.UPTICK, name = "***StrategyName***[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MaxATRStopplossFactor + ", " + ATRLength + "] SELL " + numberOfShares + " @" + exitPrice + " P/L%: " + percentGainLoss );
+
+AddOrder( OrderType.SELL_TO_CLOSE, sellOrder and !isGain, price = exitPrice, tickColor = Color.DOWNTICK, arrowColor = Color.DOWNTICK, name = "***StrategyName***[" + (currentAggPeriod / aggPeriodType) + (if aggPeriodType == AggregationPeriod.YEAR then "Y" else if aggPeriodType == AggregationPeriod.DAY then "D" else if aggPeriodType == AggregationPeriod.HOUR then "H" else "M") + ", " + MaxATRStopplossFactor + ", " + ATRLength + "] SELL " + numberOfShares + " @" + exitPrice + " P/L%: " + percentGainLoss );
+
+#Optional Sell Signal Alert
+Alert(sellOrder, "***StrategyName*** Sell Signal for " + GetSymbol(), sound = Sound.Ding);
