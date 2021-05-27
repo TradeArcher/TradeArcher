@@ -5,7 +5,7 @@
 
 input LineCalculation = {default Fibonacci, StandardDeviation, StandardError};
 input UpperLowerCalculation = {default HighLow, ATR};
-input NumberOfFibonacciLines = {one, two, three, four, five, default six};
+input NumberOfFibonacciLines = {zero, one, two, three, four, five, default six};
 input HideYesterday = no;
 input HideTwoDaysAgo = no;
 input HideThreeDaysAgo = yes;
@@ -29,6 +29,8 @@ input UseCandleBodyForHL = yes;
 def lineCount;
 
 switch (NumberOfFibonacciLines) {
+case zero:
+    lineCount = 0;
 case one:
     lineCount = 1;
 case two:
@@ -205,9 +207,11 @@ def lastCandle = (isWithinTradingHours[0] and !isWithinTradingHours[-1]);
 
 plot lineRegFib1Up = linReg + upperFibWidth * sd * FibExt1;
 lineRegFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1Up.SetHiding(lineCount < 1);
 
 plot lineRegFib1Down = linReg - lowerFibWidth * sd * FibExt1;
 lineRegFib1Down.SetDefaultColor(color = Color.DARK_ORANGE);
+lineRegFib1Down.SetHiding(lineCount < 1);
 
 plot lineRegFib2Up = linReg + upperFibWidth * sd * FibExt2;
 lineRegFib2Up.SetDefaultColor(color = Color.DARK_RED);
