@@ -3,17 +3,47 @@
 #Version: 0.1
 #Date Created: 10/18/2020
 
+AddVerticalLine(SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, text = "Begin Zombie Hours", color = Color.WHITE, stroke = Curve.FIRM);
+
+AddVerticalLine(SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, text = "Begin Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
+
+DefineGlobalColor("ZombieHours", Color.LIGHT_GRAY);
+plot upper = if(SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.POSITIVE_INFINITY, Double.NaN);
+plot lower = if(SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.NEGATIVE_INFINITY, Double.NaN);
+AddCloud(upper, lower, color1 = GlobalColor("ZombieHours"), color2 = GlobalColor("ZombieHours"));
+
+AddVerticalLine(SecondsFromTime(1600) == 0 and SecondsTillTime(1600) == 0, text = "End Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
+#End Time Specific Lines
+
 #Begin Previous Day's Close
 plot previousDaysClose = close(period=”DAY”)[1];
 previousDaysClose.SetDefaultColor(color = Color.LIGHT_GRAY);
-previousDaysClose.SetStyle(Curve.SHORT_DASH);
+previousDaysClose.SetStyle(Curve.LONG_DASH);
+#End Previous Day's Close
+
+#Begin Previous Day's Open
+plot previousDaysOpen = open(period=”DAY”)[1];
+previousDaysOpen.SetDefaultColor(color = Color.LIGHT_GRAY);
+previousDaysOpen.SetStyle(Curve.LONG_DASH);
+#End Previous Day's Close
+
+#Begin Previous Day's High
+plot previousDaysHigh = high(period=”DAY”)[1];
+previousDaysHigh.SetDefaultColor(color = Color.LIGHT_GRAY);
+previousDaysHigh.SetStyle(Curve.LONG_DASH);
+#End Previous Day's Close
+
+#Begin Previous Day's Low
+plot previousDaysLow = low(period=”DAY”)[1];
+previousDaysLow.SetDefaultColor(color = Color.LIGHT_GRAY);
+previousDaysLow.SetStyle(Curve.LONG_DASH);
 #End Previous Day's Close
 
 #Begin Today's Open
 def todaysOpen = open(period = AggregationPeriod.DAY);
 plot dailyOpen = todaysOpen;
-dailyOpen.SetDefaultColor(color = Color.LIGHT_GRAY);
-dailyOpen.SetStyle(Curve.SHORT_DASH);
+dailyOpen.AssignValueColor(if close < dailyOpen then Color.DOWNTICK else Color.UPTICK);
+dailyOpen.SetStyle(Curve.LONG_DASH);
 #End Today's Open
 
 #Begin Today's Close
@@ -71,6 +101,28 @@ lowOfDay.SetDefaultColor(color = Color.LIGHT_GRAY);
 lowOfDay.SetStyle(Curve.SHORT_DASH);
 #End High of Day
 
+#Begin Year High
+plot yearlyHigh = Highest(high(period = AggregationPeriod.DAY), length = 365);
+yearlyHigh.SetDefaultColor(color = Color.LIGHT_GRAY);
+yearlyHigh.SetStyle(Curve.SHORT_DASH);
+#End Year High
 
+#Begin Year Low
+plot yearlyLow = Lowest(low(period = AggregationPeriod.DAY), length = 365);
+yearlyLow.SetDefaultColor(color = Color.LIGHT_GRAY);
+yearlyLow.SetStyle(Curve.SHORT_DASH);
+#End Year Low
 
+#Begin Fifteen Minute Highs
+plot fifteenMinHigh = Highest(high(period = AggregationPeriod.FIFTEEN_MIN), length = 1);
+fifteenMinHigh.SetDefaultColor(color = Color.LIGHT_GRAY);
+fifteenMinHigh.SetStyle(Curve.SHORT_DASH);
+fifteenMinHigh.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+#End Fifteen Minute High
 
+#Begin Fifteen Minute Low
+plot fifteenMinLow = Lowest(low(period = AggregationPeriod.FIFTEEN_MIN), length = 1);
+fifteenMinLow.SetDefaultColor(color = Color.LIGHT_GRAY);
+fifteenMinLow.SetStyle(Curve.SHORT_DASH);
+fifteenMinLow.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+#End Fifteen Minute Low
