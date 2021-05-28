@@ -4,8 +4,10 @@
 #Date Created: 10/18/2020
 
 AddVerticalLine(SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, text = "Begin Zombie Hours", color = Color.WHITE, stroke = Curve.FIRM);
+Alert(SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, "ZOMBIE HOURS", sound = Sound.Chimes);
 
 AddVerticalLine(SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, text = "Begin Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
+Alert(SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, "REVERSAL HOUR", sound = Sound.Chimes);
 
 DefineGlobalColor("ZombieHours", Color.LIGHT_GRAY);
 plot upper = if(SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.POSITIVE_INFINITY, Double.NaN);
@@ -126,3 +128,29 @@ fifteenMinLow.SetDefaultColor(color = Color.LIGHT_GRAY);
 fifteenMinLow.SetStyle(Curve.SHORT_DASH);
 fifteenMinLow.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 #End Fifteen Minute Low
+
+#Begin ATR
+def AvgTrueRng = MovingAverage(AverageType.WILDERS, TrueRange(high(period = ”DAY”)[1], close(period = ”DAY”)[1], low(period = ”DAY”)[1]), 14);
+AddLabel(yes, "ATR: " + AvgTrueRng, color = Color.WHITE);
+def DailyClose = close(period = ”DAY”)[1];
+
+plot HighATR = DailyClose + AvgTrueRng;
+HighATR.SetDefaultColor(color = Color.RED);
+HighATR.SetStyle(Curve.SHORT_DASH);
+
+plot LowATR = DailyClose - AvgTrueRng;
+LowATR.SetDefaultColor(color = Color.GREEN);
+LowATR.SetStyle(Curve.SHORT_DASH);
+#End ATR
+
+#Begin 52 Week H/L
+plot FiftyTwoWeekHigh = Highest(high(period = AggregationPeriod.DAY),252);
+FiftyTwoWeekHigh.SetDefaultColor(color = Color.RED);
+FiftyTwoWeekHigh.SetStyle(Curve.SHORT_DASH);
+
+plot FiftyTwoWeekLow = Lowest(low(period = AggregationPeriod.DAY),252);
+FiftyTwoWeekLow.SetDefaultColor(color = Color.GREEN);
+FiftyTwoWeekLow.SetStyle(Curve.SHORT_DASH);
+
+AddLabel(yes, "52Wk H/L = " + FiftyTwoWeekHigh + " / " + FiftyTwoWeekLow, Color.WHITE);
+#End 52 Week H/L
