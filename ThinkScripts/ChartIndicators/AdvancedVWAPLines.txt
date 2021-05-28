@@ -1,11 +1,12 @@
 #Advanced VWAP Lines Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.6
+#Version: 0.7
 #Date Created: 12/07/2020
 
 input LineCalculation = {default Fibonacci, StandardDeviation, StandardError};
 input UpperLowerCalculation = {default HighLow, ATR};
 input NumberOfFibonacciLines = {zero, one, two, three, four, five, default six};
+input HideTodaysVWAPLevels = no;
 input HideYesterday = no;
 input HideTwoDaysAgo = no;
 input HideThreeDaysAgo = yes;
@@ -23,6 +24,7 @@ input FibExt3 = 0.5;
 input FibExt4 = 0.618;
 input FibExt5 = 0.786;
 input FibExt6 = 1.0;
+
 
 input UseCandleBodyForHL = yes;
 
@@ -70,9 +72,9 @@ else
 
 #def cumulativeTypicalPriceVolume = fold typicalPriceVolumeIx = 0 to cumulativePeriod with typicalPriceVolumeTotal = 0 do typicalPriceVolumeTotal + getValue(typicalPriceVolume, typicalPriceVolumeIx);
 #def cumulativeVolume = fold volumeIx = 0 to cumulativePeriod with volumeTotal = 0 do volumeTotal + getValue(volume, volumeIx);
-#plot linReg = cumulativeTypicalPriceVolume / cumulativeVolume;
+#plot VWAPValue = cumulativeTypicalPriceVolume / cumulativeVolume;
 
-#linReg.SetDefaultColor(color = Color.BLUE);
+#VWAPValue.SetDefaultColor(color = Color.BLUE);
 
 #BEGIN VWAP code
 input timeFrame = {default DAY, WEEK, MONTH};
@@ -119,14 +121,15 @@ def price = volumeVwapSum / volumeSum;
 #customVWAPLine.SetLineWeight(3);
 #customVWAPLine.SetDefaultColor(Color.GREEN);
 
-input volumeLength = 20;
+input volumeLength = 21;
+input volumeAverageType = AverageType.EXPONENTIAL;
 input volumeLineWeight2 = 33;
 input volumeLineWeight3 = 50;
 input volumeLineWeight4 = 75;
 input volumeLineWeight5 = 100;
 
 #Get moving average of volume
-def volAvg = MovingAverage(length = volumeLength, data = volume);
+def volAvg = MovingAverage(length = volumeLength, data = volume, averageType = AverageType.EXPONENTIAL);
 #Calculate middle of bar
 #calculate default 33, 50, 75 and 100 percent volume increase levels
 def volLevel2IncLevel = volAvg * (1 + (volumeLineWeight2 / 100));
@@ -136,13 +139,13 @@ def volLevel5IncLevel = volAvg * (1 + (volumeLineWeight5 / 100));
 
 
 #plot VWAP = price;
-plot linReg = price;
+plot VWAPValue = price;
 
 #Use volume increase levels to change VWAP line color 
-linReg.AssignValueColor(color = (if volume >= volLevel5IncLevel then Color.RED else if volume >= volLevel4IncLevel then Color.ORANGE else if volume >= volLevel3IncLevel then Color.LIGHT_ORANGE else if volume >= volLevel2IncLevel then Color.YELLOW else Color.BLUE));
-linReg.SetStyle(Curve.FIRM);
-linReg.SetLineWeight(2);
-#linReg.SetLineWeight((if volume >= volLevel5IncLevel then 5 else if volume >= volLevel4IncLevel then 4 else if volume >= volLevel3IncLevel then 3 else if volume >= volLevel2IncLevel then 2 else 1));
+VWAPValue.AssignValueColor(color = (if volume >= volLevel5IncLevel then Color.RED else if volume >= volLevel4IncLevel then Color.ORANGE else if volume >= volLevel3IncLevel then Color.LIGHT_ORANGE else if volume >= volLevel2IncLevel then Color.YELLOW else Color.BLUE));
+VWAPValue.SetStyle(Curve.FIRM);
+VWAPValue.SetLineWeight(2);
+#VWAPValue.SetLineWeight((if volume >= volLevel5IncLevel then 5 else if volume >= volLevel4IncLevel then 4 else if volume >= volLevel3IncLevel then 3 else if volume >= volLevel2IncLevel then 2 else 1));
 #END VWAP code
 
 def highValue = If(UseCandleBodyForHL, If(close > open, close, open), high);
@@ -186,8 +189,8 @@ def avgTrueRange = (fold atrIndex = 0 to ATRLength with sumOfTrueRanges = 0 do s
 def highOfPeriod = HighestAll(highValue);
 def lowOfPeriod = LowestAll(lowValue);
 
-#def upperFibWidth = (highOfPeriod - linReg);
-#def lowerFibWidth = (linReg - lowofPeriod);
+#def upperFibWidth = (highOfPeriod - VWAPValue);
+#def lowerFibWidth = (VWAPValue - lowofPeriod);
 def upperFibWidth;
 def lowerFibWidth;
 
@@ -205,266 +208,688 @@ input PrevDayVWAPLevel = {default EOD, MarketClose};
 def isWithinTradingHours = If (cap >= AggregationPeriod.DAY, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
 def lastCandle = (isWithinTradingHours[0] and !isWithinTradingHours[-1]);
 
-plot lineRegFib1Up = linReg + upperFibWidth * sd * FibExt1;
-lineRegFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1Up.SetHiding(lineCount < 1);
+plot VWAPValueFib1Up = VWAPValue + upperFibWidth * sd * FibExt1;
+VWAPValueFib1Up.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Up.SetHiding(HideTodaysVWAPLevels or lineCount < 1);
 
-plot lineRegFib1Down = linReg - lowerFibWidth * sd * FibExt1;
-lineRegFib1Down.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1Down.SetHiding(lineCount < 1);
+plot VWAPValueFib1Down = VWAPValue - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1Down.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Down.SetHiding(HideTodaysVWAPLevels or lineCount < 1);
 
-plot lineRegFib2Up = linReg + upperFibWidth * sd * FibExt2;
-lineRegFib2Up.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2Up.SetHiding(lineCount < 2);
+plot VWAPValueFib2Up = VWAPValue + upperFibWidth * sd * FibExt2;
+VWAPValueFib2Up.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Up.SetHiding(HideTodaysVWAPLevels or lineCount < 2);
 
-plot lineRegFib2Down = linReg - lowerFibWidth * sd * FibExt2;
-lineRegFib2Down.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2Down.SetHiding(lineCount < 2);
+plot VWAPValueFib2Down = VWAPValue - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2Down.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Down.SetHiding(HideTodaysVWAPLevels or lineCount < 2);
 
-plot lineRegFib3Up = linReg + upperFibWidth * sd * FibExt3;
-lineRegFib3Up.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3Up.SetHiding(lineCount < 3);
+plot VWAPValueFib3Up = VWAPValue + upperFibWidth * sd * FibExt3;
+VWAPValueFib3Up.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Up.SetHiding(HideTodaysVWAPLevels or lineCount < 3);
 
-plot lineRegFib3Down = linReg - lowerFibWidth * sd * FibExt3;
-lineRegFib3Down.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3Down.SetHiding(lineCount < 3);
+plot VWAPValueFib3Down = VWAPValue - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3Down.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Down.SetHiding(HideTodaysVWAPLevels or lineCount < 3);
 
-plot lineRegFib4Up = linReg + upperFibWidth * sd * FibExt4;
-lineRegFib4Up.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4Up.SetHiding(lineCount < 4);
+plot VWAPValueFib4Up = VWAPValue + upperFibWidth * sd * FibExt4;
+VWAPValueFib4Up.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Up.SetHiding(HideTodaysVWAPLevels or lineCount < 4);
 
-plot lineRegFib4Down = linReg - lowerFibWidth * sd * FibExt4;
-lineRegFib4Down.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4Down.SetHiding(lineCount < 4);
+plot VWAPValueFib4Down = VWAPValue - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4Down.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Down.SetHiding(HideTodaysVWAPLevels or lineCount < 4);
 
-plot lineRegFib5Up = linReg + upperFibWidth * sd * FibExt5;
-lineRegFib5Up.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5Up.SetHiding(lineCount < 5);
+plot VWAPValueFib5Up = VWAPValue + upperFibWidth * sd * FibExt5;
+VWAPValueFib5Up.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Up.SetHiding(HideTodaysVWAPLevels or lineCount < 5);
 
-plot lineRegFib5Down = linReg - lowerFibWidth * sd * FibExt5;
-lineRegFib5Down.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5Down.SetHiding(lineCount < 5);
+plot VWAPValueFib5Down = VWAPValue - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5Down.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Down.SetHiding(HideTodaysVWAPLevels or lineCount < 5);
 
-plot lineRegFib6Up = linReg + upperFibWidth * sd * FibExt6;
-lineRegFib6Up.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6Up.SetHiding(lineCount < 6);
+plot VWAPValueFib6Up = VWAPValue + upperFibWidth * sd * FibExt6;
+VWAPValueFib6Up.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Up.SetHiding(HideTodaysVWAPLevels or lineCount < 6);
 
-plot lineRegFib6Down = linReg - lowerFibWidth * sd * FibExt6;
-lineRegFib6Down.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6Down.SetHiding(lineCount < 6);
+plot VWAPValueFib6Down = VWAPValue - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6Down.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Down.SetHiding(HideTodaysVWAPLevels or lineCount < 6);
 
 def dailyVWAP = vwap(period = AggregationPeriod.DAY);
 
+def dailyVolume = volume(period = AggregationPeriod.DAY);
+def avgDailyVolume = MovingAverage(averageType = volumeAverageType, data = VOLUME(period = AggregationPeriod.DAY), length = volumeLength);
 
-
+input OnlyShowPreVWAPsOnHighVolume = yes;
 
 #VWAP Levels at end of prevous day
 def vwapAtEndOfPrevDay = dailyVWAP[1];
+def hasMinVolumePrevDay = if(OnlyShowPreVWAPsOnHighVolume, dailyVolume[1] >  avgDailyVolume[1], yes);
 
 
 plot vwapAtEndOfPrevDayLine = vwapAtEndOfPrevDay;
 vwapAtEndOfPrevDayLine.SetDefaultColor(color = Color.BLUE);
 vwapAtEndOfPrevDayLine.SetStyle(Curve.LONG_DASH );
-vwapAtEndOfPrevDayLine.SetHiding(HideYesterday);
+vwapAtEndOfPrevDayLine.SetHiding(HideYesterday and !hasMinVolumePrevDay);
 
-plot lineRegFib1UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt1;
-lineRegFib1UpPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib1UpPrevDay.SetHiding(HideYesterday);
+plot VWAPValueFib1UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt1;
+VWAPValueFib1UpPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1UpPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib1UpPrevDay.SetHiding(HideYesterday and !hasMinVolumePrevDay);
 
-plot lineRegFib1DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt1;
-lineRegFib1DownPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib1DownPrevDay.SetHiding(HideYesterday);
+plot VWAPValueFib1DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1DownPrevDay.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1DownPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib1DownPrevDay.SetHiding(HideYesterday and !hasMinVolumePrevDay);
 
-plot lineRegFib2UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt2;
-lineRegFib2UpPrevDay.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib2UpPrevDay.SetHiding(lineCount < 2 or HideYesterday);
+plot VWAPValueFib2UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt2;
+VWAPValueFib2UpPrevDay.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2UpPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib2UpPrevDay.SetHiding((lineCount < 2 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib2DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt2;
-lineRegFib2DownPrevDay.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib2DownPrevDay.SetHiding(lineCount < 2 or HideYesterday);
+plot VWAPValueFib2DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2DownPrevDay.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2DownPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib2DownPrevDay.SetHiding((lineCount < 2 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib3UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt3;
-lineRegFib3UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib3UpPrevDay.SetHiding(lineCount < 3 or HideYesterday);
+plot VWAPValueFib3UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt3;
+VWAPValueFib3UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3UpPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib3UpPrevDay.SetHiding((lineCount < 3 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib3DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt3;
-lineRegFib3DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib3DownPrevDay.SetHiding(lineCount < 3 or HideYesterday);
+plot VWAPValueFib3DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3DownPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib3DownPrevDay.SetHiding((lineCount < 3 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib4UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt4;
-lineRegFib4UpPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib4UpPrevDay.SetHiding(lineCount < 4 or HideYesterday);
+plot VWAPValueFib4UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt4;
+VWAPValueFib4UpPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4UpPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib4UpPrevDay.SetHiding((lineCount < 4 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib4DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt4;
-lineRegFib4DownPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib4DownPrevDay.SetHiding(lineCount < 4 or HideYesterday);
+plot VWAPValueFib4DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4DownPrevDay.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4DownPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib4DownPrevDay.SetHiding((lineCount < 4 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib5UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt5;
-lineRegFib5UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib5UpPrevDay.SetHiding(lineCount < 5 or HideYesterday);
+plot VWAPValueFib5UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt5;
+VWAPValueFib5UpPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5UpPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib5UpPrevDay.SetHiding((lineCount < 5 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib5DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt5;
-lineRegFib5DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib5DownPrevDay.SetHiding(lineCount < 5 or HideYesterday);
+plot VWAPValueFib5DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5DownPrevDay.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5DownPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib5DownPrevDay.SetHiding((lineCount < 5 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib6UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt6;
-lineRegFib6UpPrevDay.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6UpPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib6UpPrevDay.SetHiding(lineCount < 6 or HideYesterday);
+plot VWAPValueFib6UpPrevDay = vwapAtEndOfPrevDay + upperFibWidth * sd * FibExt6;
+VWAPValueFib6UpPrevDay.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6UpPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib6UpPrevDay.SetHiding((lineCount < 6 or HideYesterday) and !hasMinVolumePrevDay);
 
-plot lineRegFib6DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt6;
-lineRegFib6DownPrevDay.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6DownPrevDay.SetStyle(Curve.LONG_DASH );
-lineRegFib6DownPrevDay.SetHiding(lineCount < 6 or HideYesterday);
+plot VWAPValueFib6DownPrevDay = vwapAtEndOfPrevDay - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6DownPrevDay.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6DownPrevDay.SetStyle(Curve.LONG_DASH );
+VWAPValueFib6DownPrevDay.SetHiding((lineCount < 6 or HideYesterday) and !hasMinVolumePrevDay);
 
 
 
 
 #VWAP Levels at end of 2 days ago
 def vwapAtEndOf2DaysAgo = dailyVWAP[2];
+def hasMinVolume2DaysAgo = if(OnlyShowPreVWAPsOnHighVolume, dailyVolume[2] >  avgDailyVolume[2], yes);
 
 plot vwapAtEndOf2DaysAgoLine = vwapAtEndOf2DaysAgo;
 vwapAtEndOf2DaysAgoLine.SetDefaultColor(color = Color.BLUE);
 vwapAtEndOf2DaysAgoLine.SetStyle(Curve.MEDIUM_DASH );
-vwapAtEndOf2DaysAgoLine.SetHiding(HideTwoDaysAgo);
+vwapAtEndOf2DaysAgoLine.SetHiding(HideTwoDaysAgo and !hasMinVolume2DaysAgo);
 
-plot lineRegFib1Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt1;
-lineRegFib1Up2DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib1Up2DaysAgo.SetHiding(HideTwoDaysAgo);
+plot VWAPValueFib1Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt1;
+VWAPValueFib1Up2DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib1Up2DaysAgo.SetHiding(HideTwoDaysAgo and !hasMinVolume2DaysAgo);
 
-plot lineRegFib1Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt1;
-lineRegFib1Down2DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib1Down2DaysAgo.SetHiding(HideTwoDaysAgo);
+plot VWAPValueFib1Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1Down2DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib1Down2DaysAgo.SetHiding(HideTwoDaysAgo and !hasMinVolume2DaysAgo);
 
-plot lineRegFib2Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt2;
-lineRegFib2Up2DaysAgo.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib2Up2DaysAgo.SetHiding(lineCount < 2 or HideTwoDaysAgo);
+plot VWAPValueFib2Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt2;
+VWAPValueFib2Up2DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib2Up2DaysAgo.SetHiding((lineCount < 2 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib2Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt2;
-lineRegFib2Down2DaysAgo.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib2Down2DaysAgo.SetHiding(lineCount < 2 or HideTwoDaysAgo);
+plot VWAPValueFib2Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2Down2DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib2Down2DaysAgo.SetHiding((lineCount < 2 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib3Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt3;
-lineRegFib3Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib3Up2DaysAgo.SetHiding(lineCount < 3 or HideTwoDaysAgo);
+plot VWAPValueFib3Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt3;
+VWAPValueFib3Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib3Up2DaysAgo.SetHiding((lineCount < 3 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib3Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt3;
-lineRegFib3Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib3Down2DaysAgo.SetHiding(lineCount < 3 or HideTwoDaysAgo);
+plot VWAPValueFib3Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib3Down2DaysAgo.SetHiding((lineCount < 3 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib4Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt4;
-lineRegFib4Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib4Up2DaysAgo.SetHiding(lineCount < 4 or HideTwoDaysAgo);
+plot VWAPValueFib4Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt4;
+VWAPValueFib4Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib4Up2DaysAgo.SetHiding((lineCount < 4 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib4Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt4;
-lineRegFib4Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib4Down2DaysAgo.SetHiding(lineCount < 4 or HideTwoDaysAgo);
+plot VWAPValueFib4Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib4Down2DaysAgo.SetHiding((lineCount < 4 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib5Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt5;
-lineRegFib5Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib5Up2DaysAgo.SetHiding(lineCount < 5 or HideTwoDaysAgo);
+plot VWAPValueFib5Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt5;
+VWAPValueFib5Up2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib5Up2DaysAgo.SetHiding((lineCount < 5 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib5Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt5;
-lineRegFib5Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib5Down2DaysAgo.SetHiding(lineCount < 5 or HideTwoDaysAgo);
+plot VWAPValueFib5Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5Down2DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib5Down2DaysAgo.SetHiding((lineCount < 5 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib6Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt6;
-lineRegFib6Up2DaysAgo.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib6Up2DaysAgo.SetHiding(lineCount < 6 or HideTwoDaysAgo);
+plot VWAPValueFib6Up2DaysAgo = vwapAtEndOf2DaysAgo + upperFibWidth * sd * FibExt6;
+VWAPValueFib6Up2DaysAgo.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Up2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib6Up2DaysAgo.SetHiding((lineCount < 6 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
-plot lineRegFib6Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt6;
-lineRegFib6Down2DaysAgo.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
-lineRegFib6Down2DaysAgo.SetHiding(lineCount < 6 or HideTwoDaysAgo);
+plot VWAPValueFib6Down2DaysAgo = vwapAtEndOf2DaysAgo - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6Down2DaysAgo.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Down2DaysAgo.SetStyle(Curve.MEDIUM_DASH );
+VWAPValueFib6Down2DaysAgo.SetHiding((lineCount < 6 or HideTwoDaysAgo) and !hasMinVolume2DaysAgo);
 
 
 
 
 #VWAP Levels at end of 3 days ago
 def vwapAtEndOf3DaysAgo = dailyVWAP[3];
+def hasMinVolume3DaysAgo = if(OnlyShowPreVWAPsOnHighVolume, dailyVolume[3] >  avgDailyVolume[3], yes);
 
 plot vwapAtEndOf3DaysAgoLine = vwapAtEndOf3DaysAgo;
 vwapAtEndOf3DaysAgoLine.SetDefaultColor(color = Color.BLUE);
 vwapAtEndOf3DaysAgoLine.SetStyle(Curve.SHORT_DASH );
-vwapAtEndOf3DaysAgoLine.SetHiding(HideThreeDaysAgo);
+vwapAtEndOf3DaysAgoLine.SetHiding(HideThreeDaysAgo and !hasMinVolume3DaysAgo);
 
-plot lineRegFib1Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt1;
-lineRegFib1Up3DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib1Up3DaysAgo.SetHiding(HideThreeDaysAgo);
+plot VWAPValueFib1Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt1;
+VWAPValueFib1Up3DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1Up3DaysAgo.SetHiding(HideThreeDaysAgo and !hasMinVolume3DaysAgo);
 
-plot lineRegFib1Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt1;
-lineRegFib1Down3DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
-lineRegFib1Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib1Down3DaysAgo.SetHiding(HideThreeDaysAgo);
+plot VWAPValueFib1Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1Down3DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1Down3DaysAgo.SetHiding(HideThreeDaysAgo and !hasMinVolume3DaysAgo);
 
-plot lineRegFib2Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt2;
-lineRegFib2Up3DaysAgo.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib2Up3DaysAgo.SetHiding(lineCount < 2 or HideThreeDaysAgo);
+plot VWAPValueFib2Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt2;
+VWAPValueFib2Up3DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2Up3DaysAgo.SetHiding((lineCount < 2 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib2Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt2;
-lineRegFib2Down3DaysAgo.SetDefaultColor(color = Color.DARK_RED);
-lineRegFib2Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib2Down3DaysAgo.SetHiding(lineCount < 2 or HideThreeDaysAgo);
+plot VWAPValueFib2Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2Down3DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2Down3DaysAgo.SetHiding((lineCount < 2 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib3Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt3;
-lineRegFib3Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib3Up3DaysAgo.SetHiding(lineCount < 3 or HideThreeDaysAgo);
+plot VWAPValueFib3Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt3;
+VWAPValueFib3Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3Up3DaysAgo.SetHiding((lineCount < 3 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib3Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt3;
-lineRegFib3Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib3Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib3Down3DaysAgo.SetHiding(lineCount < 3 or HideThreeDaysAgo);
+plot VWAPValueFib3Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3Down3DaysAgo.SetHiding((lineCount < 3 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib4Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt4;
-lineRegFib4Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib4Up3DaysAgo.SetHiding(lineCount < 4 or HideThreeDaysAgo);
+plot VWAPValueFib4Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt4;
+VWAPValueFib4Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4Up3DaysAgo.SetHiding((lineCount < 4 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib4Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt4;
-lineRegFib4Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
-lineRegFib4Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib4Down3DaysAgo.SetHiding(lineCount < 4 or HideThreeDaysAgo);
+plot VWAPValueFib4Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4Down3DaysAgo.SetHiding((lineCount < 4 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib5Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt5;
-lineRegFib5Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib5Up3DaysAgo.SetHiding(lineCount < 5 or HideThreeDaysAgo);
+plot VWAPValueFib5Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt5;
+VWAPValueFib5Up3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5Up3DaysAgo.SetHiding((lineCount < 5 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib5Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt5;
-lineRegFib5Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
-lineRegFib5Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib5Down3DaysAgo.SetHiding(lineCount < 5 or HideThreeDaysAgo);
+plot VWAPValueFib5Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5Down3DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5Down3DaysAgo.SetHiding((lineCount < 5 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib6Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt6;
-lineRegFib6Up3DaysAgo.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib6Up3DaysAgo.SetHiding(lineCount < 6 or HideThreeDaysAgo);
+plot VWAPValueFib6Up3DaysAgo = vwapAtEndOf3DaysAgo + upperFibWidth * sd * FibExt6;
+VWAPValueFib6Up3DaysAgo.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Up3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6Up3DaysAgo.SetHiding((lineCount < 6 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
 
-plot lineRegFib6Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt6;
-lineRegFib6Down3DaysAgo.SetDefaultColor(color = Color.VIOLET);
-lineRegFib6Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
-lineRegFib6Down3DaysAgo.SetHiding(lineCount < 6 or HideThreeDaysAgo);
+plot VWAPValueFib6Down3DaysAgo = vwapAtEndOf3DaysAgo - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6Down3DaysAgo.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Down3DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6Down3DaysAgo.SetHiding((lineCount < 6 or HideThreeDaysAgo) and !hasMinVolume3DaysAgo);
+
+
+#VWAP Levels at end of 4 days ago
+def vwapAtEndOf4DaysAgo = dailyVWAP[4];
+def hasMinVolume4DaysAgo = if(OnlyShowPreVWAPsOnHighVolume, dailyVolume[4] >  avgDailyVolume[4], yes);
+
+plot vwapAtEndOf4DaysAgoLine = vwapAtEndOf4DaysAgo;
+vwapAtEndOf4DaysAgoLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOf4DaysAgoLine.SetStyle(Curve.SHORT_DASH );
+vwapAtEndOf4DaysAgoLine.SetHiding(HideFourDaysAgo and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib1Up4DaysAgo = vwapAtEndOf4DaysAgo + upperFibWidth * sd * FibExt1;
+VWAPValueFib1Up4DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Up4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1Up4DaysAgo.SetHiding(HideFourDaysAgo and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib1Down4DaysAgo = vwapAtEndOf4DaysAgo - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1Down4DaysAgo.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1Down4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1Down4DaysAgo.SetHiding(HideFourDaysAgo and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib2Up4DaysAgo = vwapAtEndOf4DaysAgo + upperFibWidth * sd * FibExt2;
+VWAPValueFib2Up4DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Up4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2Up4DaysAgo.SetHiding((lineCount < 2 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib2Down4DaysAgo = vwapAtEndOf4DaysAgo - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2Down4DaysAgo.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2Down4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2Down4DaysAgo.SetHiding((lineCount < 2 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib3Up4DaysAgo = vwapAtEndOf4DaysAgo + upperFibWidth * sd * FibExt3;
+VWAPValueFib3Up4DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Up4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3Up4DaysAgo.SetHiding((lineCount < 3 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib3Down4DaysAgo = vwapAtEndOf4DaysAgo - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3Down4DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3Down4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3Down4DaysAgo.SetHiding((lineCount < 3 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib4Up4DaysAgo = vwapAtEndOf4DaysAgo + upperFibWidth * sd * FibExt4;
+VWAPValueFib4Up4DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Up4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4Up4DaysAgo.SetHiding((lineCount < 4 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib4Down4DaysAgo = vwapAtEndOf4DaysAgo - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4Down4DaysAgo.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4Down4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4Down4DaysAgo.SetHiding((lineCount < 4 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib5Up4DaysAgo = vwapAtEndOf4DaysAgo + upperFibWidth * sd * FibExt5;
+VWAPValueFib5Up4DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Up4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5Up4DaysAgo.SetHiding((lineCount < 5 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib5Down4DaysAgo = vwapAtEndOf4DaysAgo - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5Down4DaysAgo.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5Down4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5Down4DaysAgo.SetHiding((lineCount < 5 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib6Up4DaysAgo = vwapAtEndOf4DaysAgo + upperFibWidth * sd * FibExt6;
+VWAPValueFib6Up4DaysAgo.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Up4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6Up4DaysAgo.SetHiding((lineCount < 6 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+plot VWAPValueFib6Down4DaysAgo = vwapAtEndOf4DaysAgo - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6Down4DaysAgo.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6Down4DaysAgo.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6Down4DaysAgo.SetHiding((lineCount < 6 or HideFourDaysAgo) and !hasMinVolume4DaysAgo);
+
+#VWAP Levels at end of week
+def weeklyVWAP = vwap(period = AggregationPeriod.WEEK);
+
+def weeklyVolume = volume(period = AggregationPeriod.WEEK);
+def avgWeeklyVolume = MovingAverage(averageType = volumeAverageType, data = VOLUME(period = AggregationPeriod.WEEK), length = volumeLength);
+
+def vwapAtEndOfWeek = weeklyVWAP;
+def hasMinVolumeWeek = if(OnlyShowPreVWAPsOnHighVolume, weeklyVolume >  avgWeeklyVolume, yes);
+
+plot vwapAtEndOfWeekLine = vwapAtEndOfWeek;
+vwapAtEndOfWeekLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOfWeekLine.SetStyle(Curve.SHORT_DASH );
+vwapAtEndOfWeekLine.SetHiding(HideWeek and !hasMinVolumeWeek);
+vwapAtEndOfWeekLine.SetLineWeight(2);
+
+plot VWAPValueFib1UpWeek = vwapAtEndOfWeek + upperFibWidth * sd * FibExt1;
+VWAPValueFib1UpWeek.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1UpWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1UpWeek.SetHiding(HideWeek and !hasMinVolumeWeek);
+VWAPValueFib1UpWeek.SetLineWeight(2);
+
+plot VWAPValueFib1DownWeek = vwapAtEndOfWeek - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1DownWeek.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1DownWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1DownWeek.SetHiding(HideWeek and !hasMinVolumeWeek);
+VWAPValueFib1DownWeek.SetLineWeight(2);
+
+plot VWAPValueFib2UpWeek = vwapAtEndOfWeek + upperFibWidth * sd * FibExt2;
+VWAPValueFib2UpWeek.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2UpWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2UpWeek.SetHiding((lineCount < 2 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib2UpWeek.SetLineWeight(2);
+
+plot VWAPValueFib2DownWeek = vwapAtEndOfWeek - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2DownWeek.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2DownWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2DownWeek.SetHiding((lineCount < 2 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib2DownWeek.SetLineWeight(2);
+
+plot VWAPValueFib3UpWeek = vwapAtEndOfWeek + upperFibWidth * sd * FibExt3;
+VWAPValueFib3UpWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3UpWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3UpWeek.SetHiding((lineCount < 3 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib3UpWeek.SetLineWeight(2);
+
+plot VWAPValueFib3DownWeek = vwapAtEndOfWeek - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3DownWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3DownWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3DownWeek.SetHiding((lineCount < 3 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib3DownWeek.SetLineWeight(2);
+
+plot VWAPValueFib4UpWeek = vwapAtEndOfWeek + upperFibWidth * sd * FibExt4;
+VWAPValueFib4UpWeek.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4UpWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4UpWeek.SetHiding((lineCount < 4 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib4UpWeek.SetLineWeight(2);
+
+plot VWAPValueFib4DownWeek = vwapAtEndOfWeek - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4DownWeek.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4DownWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4DownWeek.SetHiding((lineCount < 4 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib4DownWeek.SetLineWeight(2);
+
+plot VWAPValueFib5UpWeek = vwapAtEndOfWeek + upperFibWidth * sd * FibExt5;
+VWAPValueFib5UpWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5UpWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5UpWeek.SetHiding((lineCount < 5 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib5UpWeek.SetLineWeight(2);
+
+plot VWAPValueFib5DownWeek = vwapAtEndOfWeek - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5DownWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5DownWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5DownWeek.SetHiding((lineCount < 5 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib5DownWeek.SetLineWeight(2);
+
+plot VWAPValueFib6UpWeek = vwapAtEndOfWeek + upperFibWidth * sd * FibExt6;
+VWAPValueFib6UpWeek.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6UpWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6UpWeek.SetHiding((lineCount < 6 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib6UpWeek.SetLineWeight(2);
+
+plot VWAPValueFib6DownWeek = vwapAtEndOfWeek - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6DownWeek.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6DownWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6DownWeek.SetHiding((lineCount < 6 or HideWeek) and !hasMinVolumeWeek);
+VWAPValueFib6DownWeek.SetLineWeight(2);
+
+
+#VWAP Levels at end of last week
+
+def vwapAtEndOfLastWeek = weeklyVWAP[1];
+def hasMinVolumeLastWeek = if(OnlyShowPreVWAPsOnHighVolume, weeklyVolume[1] >  avgWeeklyVolume[1], yes);
+
+plot vwapAtEndOfLastWeekLine = vwapAtEndOfLastWeek;
+vwapAtEndOfLastWeekLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOfLastWeekLine.SetStyle(Curve.SHORT_DASH );
+vwapAtEndOfLastWeekLine.SetHiding(HideLastWeek and !hasMinVolumeLastWeek);
+vwapAtEndOfLastWeekLine.SetLineWeight(2);
+
+plot VWAPValueFib1UpLastWeek = vwapAtEndOfLastWeek + upperFibWidth * sd * FibExt1;
+VWAPValueFib1UpLastWeek.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1UpLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1UpLastWeek.SetHiding(HideLastWeek and !hasMinVolumeLastWeek);
+VWAPValueFib1UpLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib1DownLastWeek = vwapAtEndOfLastWeek - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1DownLastWeek.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1DownLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1DownLastWeek.SetHiding(HideLastWeek and !hasMinVolumeLastWeek);
+VWAPValueFib1DownLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib2UpLastWeek = vwapAtEndOfLastWeek + upperFibWidth * sd * FibExt2;
+VWAPValueFib2UpLastWeek.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2UpLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2UpLastWeek.SetHiding((lineCount < 2 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib2UpLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib2DownLastWeek = vwapAtEndOfLastWeek - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2DownLastWeek.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2DownLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2DownLastWeek.SetHiding((lineCount < 2 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib2DownLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib3UpLastWeek = vwapAtEndOfLastWeek + upperFibWidth * sd * FibExt3;
+VWAPValueFib3UpLastWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3UpLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3UpLastWeek.SetHiding((lineCount < 3 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib3UpLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib3DownLastWeek = vwapAtEndOfLastWeek - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3DownLastWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3DownLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3DownLastWeek.SetHiding((lineCount < 3 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib3DownLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib4UpLastWeek = vwapAtEndOfLastWeek + upperFibWidth * sd * FibExt4;
+VWAPValueFib4UpLastWeek.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4UpLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4UpLastWeek.SetHiding((lineCount < 4 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib4UpLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib4DownLastWeek = vwapAtEndOfLastWeek - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4DownLastWeek.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4DownLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4DownLastWeek.SetHiding((lineCount < 4 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib4DownLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib5UpLastWeek = vwapAtEndOfLastWeek + upperFibWidth * sd * FibExt5;
+VWAPValueFib5UpLastWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5UpLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5UpLastWeek.SetHiding((lineCount < 5 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib5UpLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib5DownLastWeek = vwapAtEndOfLastWeek - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5DownLastWeek.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5DownLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5DownLastWeek.SetHiding((lineCount < 5 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib5DownLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib6UpLastWeek = vwapAtEndOfLastWeek + upperFibWidth * sd * FibExt6;
+VWAPValueFib6UpLastWeek.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6UpLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6UpLastWeek.SetHiding((lineCount < 6 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib6UpLastWeek.SetLineWeight(2);
+
+plot VWAPValueFib6DownLastWeek = vwapAtEndOfLastWeek - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6DownLastWeek.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6DownLastWeek.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6DownLastWeek.SetHiding((lineCount < 6 or HideLastWeek) and !hasMinVolumeLastWeek);
+VWAPValueFib6DownLastWeek.SetLineWeight(2);
+
+
+#VWAP Levels at end of month
+def monthlyVWAP = vwap(period = AggregationPeriod.MONTH);
+
+def monthlyVolume = volume(period = AggregationPeriod.MONTH);
+def avgMonthlyVolume = MovingAverage(averageType = volumeAverageType, data = VOLUME(period = AggregationPeriod.MONTH), length = volumeLength);
+
+def vwapAtEndOfMonth = monthlyVWAP;
+def hasMinVolumeMonth = if(OnlyShowPreVWAPsOnHighVolume, monthlyVolume >  avgMonthlyVolume, yes);
+
+plot vwapAtEndOfMonthLine = vwapAtEndOfMonth;
+vwapAtEndOfMonthLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOfMonthLine.SetStyle(Curve.SHORT_DASH );
+vwapAtEndOfMonthLine.SetHiding(HideMonth and !hasMinVolumeMonth);
+vwapAtEndOfMonthLine.SetLineWeight(3);
+
+plot VWAPValueFib1UpMonth = vwapAtEndOfMonth + upperFibWidth * sd * FibExt1;
+VWAPValueFib1UpMonth.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1UpMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1UpMonth.SetHiding(HideMonth and !hasMinVolumeMonth);
+VWAPValueFib1UpMonth.SetLineWeight(3);
+
+plot VWAPValueFib1DownMonth = vwapAtEndOfMonth - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1DownMonth.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1DownMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1DownMonth.SetHiding(HideMonth and !hasMinVolumeMonth);
+VWAPValueFib1DownMonth.SetLineWeight(3);
+
+plot VWAPValueFib2UpMonth = vwapAtEndOfMonth + upperFibWidth * sd * FibExt2;
+VWAPValueFib2UpMonth.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2UpMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2UpMonth.SetHiding((lineCount < 2 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib2UpMonth.SetLineWeight(3);
+
+plot VWAPValueFib2DownMonth = vwapAtEndOfMonth - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2DownMonth.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2DownMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2DownMonth.SetHiding((lineCount < 2 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib2DownMonth.SetLineWeight(3);
+
+plot VWAPValueFib3UpMonth = vwapAtEndOfMonth + upperFibWidth * sd * FibExt3;
+VWAPValueFib3UpMonth.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3UpMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3UpMonth.SetHiding((lineCount < 3 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib3UpMonth.SetLineWeight(3);
+
+plot VWAPValueFib3DownMonth = vwapAtEndOfMonth - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3DownMonth.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3DownMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3DownMonth.SetHiding((lineCount < 3 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib3DownMonth.SetLineWeight(3);
+
+plot VWAPValueFib4UpMonth = vwapAtEndOfMonth + upperFibWidth * sd * FibExt4;
+VWAPValueFib4UpMonth.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4UpMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4UpMonth.SetHiding((lineCount < 4 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib4UpMonth.SetLineWeight(3);
+
+plot VWAPValueFib4DownMonth = vwapAtEndOfMonth - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4DownMonth.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4DownMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4DownMonth.SetHiding((lineCount < 4 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib4DownMonth.SetLineWeight(3);
+
+plot VWAPValueFib5UpMonth = vwapAtEndOfMonth + upperFibWidth * sd * FibExt5;
+VWAPValueFib5UpMonth.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5UpMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5UpMonth.SetHiding((lineCount < 5 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib5UpMonth.SetLineWeight(3);
+
+plot VWAPValueFib5DownMonth = vwapAtEndOfMonth - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5DownMonth.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5DownMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5DownMonth.SetHiding((lineCount < 5 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib5DownMonth.SetLineWeight(3);
+
+plot VWAPValueFib6UpMonth = vwapAtEndOfMonth + upperFibWidth * sd * FibExt6;
+VWAPValueFib6UpMonth.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6UpMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6UpMonth.SetHiding((lineCount < 6 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib6UpMonth.SetLineWeight(3);
+
+plot VWAPValueFib6DownMonth = vwapAtEndOfMonth - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6DownMonth.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6DownMonth.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6DownMonth.SetHiding((lineCount < 6 or HideMonth) and !hasMinVolumeMonth);
+VWAPValueFib6DownMonth.SetLineWeight(3);
+
+
+#VWAP Levels at end of Quarter
+def quarterlyVWAP = vwap(period = AggregationPeriod.Quarter);
+
+def quarterlyVolume = volume(period = AggregationPeriod.Quarter);
+def avgQuarterlyVolume = MovingAverage(averageType = volumeAverageType, data = VOLUME(period = AggregationPeriod.QUARTER), length = volumeLength);
+
+def vwapAtEndOfQuarter = quarterlyVWAP;
+def hasMinVolumeQuarter = if(OnlyShowPreVWAPsOnHighVolume, quarterlyVolume >  avgQuarterlyVolume, yes);
+
+plot vwapAtEndOfQuarterLine = vwapAtEndOfQuarter;
+vwapAtEndOfQuarterLine.SetDefaultColor(color = Color.BLUE);
+vwapAtEndOfQuarterLine.SetStyle(Curve.SHORT_DASH );
+vwapAtEndOfQuarterLine.SetHiding(HideQuarter and !hasMinVolumeQuarter);
+vwapAtEndOfQuarterLine.SetLineWeight(4);
+
+plot VWAPValueFib1UpQuarter = vwapAtEndOfQuarter + upperFibWidth * sd * FibExt1;
+VWAPValueFib1UpQuarter.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1UpQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1UpQuarter.SetHiding(HideQuarter and !hasMinVolumeQuarter);
+VWAPValueFib1UpQuarter.SetLineWeight(4);
+
+plot VWAPValueFib1DownQuarter = vwapAtEndOfQuarter - lowerFibWidth * sd * FibExt1;
+VWAPValueFib1DownQuarter.SetDefaultColor(color = Color.DARK_ORANGE);
+VWAPValueFib1DownQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib1DownQuarter.SetHiding(HideQuarter and !hasMinVolumeQuarter);
+VWAPValueFib1DownQuarter.SetLineWeight(4);
+
+plot VWAPValueFib2UpQuarter = vwapAtEndOfQuarter + upperFibWidth * sd * FibExt2;
+VWAPValueFib2UpQuarter.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2UpQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2UpQuarter.SetHiding((lineCount < 2 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib2UpQuarter.SetLineWeight(4);
+
+plot VWAPValueFib2DownQuarter = vwapAtEndOfQuarter - lowerFibWidth * sd * FibExt2;
+VWAPValueFib2DownQuarter.SetDefaultColor(color = Color.DARK_RED);
+VWAPValueFib2DownQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib2DownQuarter.SetHiding((lineCount < 2 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib2DownQuarter.SetLineWeight(4);
+
+plot VWAPValueFib3UpQuarter = vwapAtEndOfQuarter + upperFibWidth * sd * FibExt3;
+VWAPValueFib3UpQuarter.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3UpQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3UpQuarter.SetHiding((lineCount < 3 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib3UpQuarter.SetLineWeight(4);
+
+plot VWAPValueFib3DownQuarter = vwapAtEndOfQuarter - lowerFibWidth * sd * FibExt3;
+VWAPValueFib3DownQuarter.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib3DownQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib3DownQuarter.SetHiding((lineCount < 3 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib3DownQuarter.SetLineWeight(4);
+
+plot VWAPValueFib4UpQuarter = vwapAtEndOfQuarter + upperFibWidth * sd * FibExt4;
+VWAPValueFib4UpQuarter.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4UpQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4UpQuarter.SetHiding((lineCount < 4 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib4UpQuarter.SetLineWeight(4);
+
+plot VWAPValueFib4DownQuarter = vwapAtEndOfQuarter - lowerFibWidth * sd * FibExt4;
+VWAPValueFib4DownQuarter.SetDefaultColor(color = Color.LIGHT_ORANGE);
+VWAPValueFib4DownQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib4DownQuarter.SetHiding((lineCount < 4 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib4DownQuarter.SetLineWeight(4);
+
+plot VWAPValueFib5UpQuarter = vwapAtEndOfQuarter + upperFibWidth * sd * FibExt5;
+VWAPValueFib5UpQuarter.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5UpQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5UpQuarter.SetHiding((lineCount < 5 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib5UpQuarter.SetLineWeight(4);
+
+plot VWAPValueFib5DownQuarter = vwapAtEndOfQuarter - lowerFibWidth * sd * FibExt5;
+VWAPValueFib5DownQuarter.SetDefaultColor(color = Color.LIGHT_RED);
+VWAPValueFib5DownQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib5DownQuarter.SetHiding((lineCount < 5 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib5DownQuarter.SetLineWeight(4);
+
+plot VWAPValueFib6UpQuarter = vwapAtEndOfQuarter + upperFibWidth * sd * FibExt6;
+VWAPValueFib6UpQuarter.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6UpQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6UpQuarter.SetHiding((lineCount < 6 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib6UpQuarter.SetLineWeight(4);
+
+plot VWAPValueFib6DownQuarter = vwapAtEndOfQuarter - lowerFibWidth * sd * FibExt6;
+VWAPValueFib6DownQuarter.SetDefaultColor(color = Color.VIOLET);
+VWAPValueFib6DownQuarter.SetStyle(Curve.SHORT_DASH );
+VWAPValueFib6DownQuarter.SetHiding((lineCount < 6 or HideQuarter) and !hasMinVolumeQuarter);
+VWAPValueFib6DownQuarter.SetLineWeight(4);
