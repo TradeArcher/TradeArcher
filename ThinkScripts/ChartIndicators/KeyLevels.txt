@@ -14,7 +14,7 @@ plot upper = if(SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Doubl
 plot lower = if(SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.NEGATIVE_INFINITY, Double.NaN);
 AddCloud(upper, lower, color1 = GlobalColor("ZombieHours"), color2 = GlobalColor("ZombieHours"));
 
-AddVerticalLine(SecondsFromTime(1600) == 0 and SecondsTillTime(1600) == 0, text = "End Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
+#AddVerticalLine(SecondsFromTime(1600) == 0 and SecondsTillTime(1600) == 0, text = "End Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
 #End Time Specific Lines
 
 #Begin Previous Day's Close
