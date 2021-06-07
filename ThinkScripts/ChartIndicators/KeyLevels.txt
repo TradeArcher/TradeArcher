@@ -1,17 +1,21 @@
 #Key Levels Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 10/18/2020
 
-AddVerticalLine(SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, text = "Begin Zombie Hours", color = Color.WHITE, stroke = Curve.FIRM);
-Alert(SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, "ZOMBIE HOURS", sound = Sound.Chimes);
+def currentAggPrd = GetAggregationPeriod();
+def isIntraDay = currentAggPrd < AggregationPeriod.DAY;
+#AddLabel(!isIntraDay, "!Intraday");
 
-AddVerticalLine(SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, text = "Begin Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
-Alert(SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, "REVERSAL HOUR", sound = Sound.Chimes);
+AddVerticalLine(isIntraDay and SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, text = "Begin Zombie Hours", color = Color.WHITE, stroke = Curve.FIRM);
+Alert(isIntraDay and SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, "ZOMBIE HOURS", sound = Sound.Chimes);
+
+AddVerticalLine(isIntraDay and SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, text = "Begin Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
+Alert(isIntraDay and SecondsFromTime(isIntraDay and 1500) == 0 and SecondsTillTime(1500) == 0, "REVERSAL HOUR", sound = Sound.Chimes);
 
 DefineGlobalColor("ZombieHours", Color.LIGHT_GRAY);
-plot upper = if(SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.POSITIVE_INFINITY, Double.NaN);
-plot lower = if(SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.NEGATIVE_INFINITY, Double.NaN);
+plot upper = if(isIntraDay and SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.POSITIVE_INFINITY, Double.NaN);
+plot lower = if(isIntraDay and SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.NEGATIVE_INFINITY, Double.NaN);
 AddCloud(upper, lower, color1 = GlobalColor("ZombieHours"), color2 = GlobalColor("ZombieHours"));
 
 #AddVerticalLine(SecondsFromTime(1600) == 0 and SecondsTillTime(1600) == 0, text = "End Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
@@ -21,24 +25,28 @@ AddCloud(upper, lower, color1 = GlobalColor("ZombieHours"), color2 = GlobalColor
 plot previousDaysClose = close(period=”DAY”)[1];
 previousDaysClose.SetDefaultColor(color = Color.LIGHT_GRAY);
 previousDaysClose.SetStyle(Curve.LONG_DASH);
+previousDaysClose.setHiding(!isIntraDay);
 #End Previous Day's Close
 
 #Begin Previous Day's Open
 plot previousDaysOpen = open(period=”DAY”)[1];
 previousDaysOpen.SetDefaultColor(color = Color.LIGHT_GRAY);
 previousDaysOpen.SetStyle(Curve.LONG_DASH);
+previousDaysOpen.setHiding(!isIntraDay);
 #End Previous Day's Close
 
 #Begin Previous Day's High
 plot previousDaysHigh = high(period=”DAY”)[1];
 previousDaysHigh.SetDefaultColor(color = Color.LIGHT_GRAY);
 previousDaysHigh.SetStyle(Curve.LONG_DASH);
+previousDaysHigh.setHiding(!isIntraDay);
 #End Previous Day's Close
 
 #Begin Previous Day's Low
 plot previousDaysLow = low(period=”DAY”)[1];
 previousDaysLow.SetDefaultColor(color = Color.LIGHT_GRAY);
 previousDaysLow.SetStyle(Curve.LONG_DASH);
+previousDaysLow.setHiding(!isIntraDay);
 #End Previous Day's Close
 
 #Begin Today's Open
@@ -46,6 +54,7 @@ def todaysOpen = open(period = AggregationPeriod.DAY);
 plot dailyOpen = todaysOpen;
 dailyOpen.AssignValueColor(if close < dailyOpen then Color.DOWNTICK else Color.UPTICK);
 dailyOpen.SetStyle(Curve.LONG_DASH);
+dailyOpen.setHiding(!isIntraDay);
 #End Today's Open
 
 #Begin Today's Close
@@ -54,14 +63,14 @@ def afterEnd = GetTime() > RegularTradingEnd(GetYYYYMMDD());
 #def lastSessionEndTime = RegularTradingEnd(GetYYYYMMDD());
 #def minutesSinceClose = SecondsFromTime(0400) / 60;
 
-def isAfterHours = !beforeStart and afterEnd;
+def isAfterHours = isIntraDay and !beforeStart and afterEnd;
 #def isPreMarket = beforeStart and !afterEnd;
-def isMarketHours = !beforeStart and !afterEnd;
+def isMarketHours = isIntraDay and !beforeStart and !afterEnd;
 
 plot todaysClose = if isMarketHours then close(period = AggregationPeriod.DAY, priceType = PriceType.LAST) else if isAfterHours then close(period = AggregationPeriod.DAY, priceType = PriceType.LAST)[0] else close(period = AggregationPeriod.DAY, priceType = PriceType.LAST)[1];
-
 todaysClose.SetDefaultColor(color = Color.LIGHT_GRAY);
 todaysClose.SetStyle(Curve.SHORT_DASH);
+todaysClose.setHiding(!isIntraDay);
 #End Today's Close
 
 #Begin Pre-Market High
@@ -72,9 +81,10 @@ def overNightHigh = if isOutsideTradingHours and !isOutsideTradingHours[1] then 
 def overNightHighBar = if isOutsideTradingHours and h == overNightHigh then bar else Double.NaN;
 def overNightHighest = if BarNumber() == HighestAll(overNightHighBar) then overNightHigh else overNightHighest[1];
 
-plot overNightHighestLine = overNightHighest;
+plot overNightHighestLine = if(!isIntraDay, Double.NaN, overNightHighest);
 overNightHighestLine.SetDefaultColor(color = Color.LIGHT_GRAY);
 overNightHighestLine.SetStyle(Curve.SHORT_DASH);
+overNightHighestLine.setHiding(!isIntraDay);
 #End Pre-MarketForecast High
 
 #Begin Pre-Market Low
@@ -83,74 +93,92 @@ def overNightLow = if isOutsideTradingHours and !isOutsideTradingHours[1] then l
 def overNightLowBar = if isOutsideTradingHours and l == overNightLow then bar else Double.NaN;
 def overNightLowest = if BarNumber() == HighestAll(overNightLowBar) then overNightLow else overNightLowest[1];
 
-plot overNightLowestLine = overNightLowest;
+plot overNightLowestLine = if(!isIntraDay, Double.NaN, overNightLowest);
 overNightLowestLine.SetDefaultColor(color = Color.LIGHT_GRAY);
 overNightLowestLine.SetStyle(Curve.SHORT_DASH);
+overNightLowestLine.setHiding(!isIntraDay);
 #End Pre-MarketForecast Low
 
 #Begin After-Market High
 #End After-Market High
 
 #Begin High Of Day
-plot highOfDay = high(period = AggregationPeriod.DAY);
+plot highOfDay = if(!isIntraDay, high, high(period = AggregationPeriod.DAY));
 highOfDay.SetDefaultColor(color = Color.LIGHT_GRAY);
 highOfDay.SetStyle(Curve.SHORT_DASH);
+highOfDay.setHiding(!isIntraDay);
 #End High of Day
 
 #Begin Low Of Day
-plot lowOfDay = low(period = AggregationPeriod.DAY);
+plot lowOfDay = if(!isIntraDay, low, low(period = AggregationPeriod.DAY));
 lowOfDay.SetDefaultColor(color = Color.LIGHT_GRAY);
 lowOfDay.SetStyle(Curve.SHORT_DASH);
+lowOfDay.setHiding(!isIntraDay);
 #End High of Day
 
 #Begin Year High
-plot yearlyHigh = Highest(high(period = AggregationPeriod.DAY), length = 365);
+plot yearlyHigh = if(!isIntraDay, Double.NaN, Highest(high(period = AggregationPeriod.DAY), length = 365));
 yearlyHigh.SetDefaultColor(color = Color.LIGHT_GRAY);
 yearlyHigh.SetStyle(Curve.SHORT_DASH);
 #End Year High
 
 #Begin Year Low
-plot yearlyLow = Lowest(low(period = AggregationPeriod.DAY), length = 365);
+plot yearlyLow = if(!isIntraDay, Double.NaN, Lowest(low(period = AggregationPeriod.DAY), length = 365));
 yearlyLow.SetDefaultColor(color = Color.LIGHT_GRAY);
 yearlyLow.SetStyle(Curve.SHORT_DASH);
 #End Year Low
 
+#AddLabel(yes, "aggPrd: " + currentAggPrd + "| " + AggregationPeriod.FIFTEEN_MIN + " isIntraDay = " + if !(currentAggPrd > AggregationPeriod.FIFTEEN_MIN) then "no" else "yes" );
+
+def fifteenMinAggPrd = if(currentAggPrd > AggregationPeriod.FIFTEEN_MIN, currentAggPrd, AggregationPeriod.FIFTEEN_MIN);
 #Begin Fifteen Minute Highs
-plot fifteenMinHigh = Highest(high(period = AggregationPeriod.FIFTEEN_MIN), length = 1);
+plot fifteenMinHigh = Highest(high(period = fifteenMinAggPrd), length = 1);
 fifteenMinHigh.SetDefaultColor(color = Color.LIGHT_GRAY);
 fifteenMinHigh.SetStyle(Curve.SHORT_DASH);
 fifteenMinHigh.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fifteenMinHigh.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
 #End Fifteen Minute High
 
 #Begin Fifteen Minute Low
-plot fifteenMinLow = Lowest(low(period = AggregationPeriod.FIFTEEN_MIN), length = 1);
+plot fifteenMinLow = Lowest(low(period = fifteenMinAggPrd), length = 1);
 fifteenMinLow.SetDefaultColor(color = Color.LIGHT_GRAY);
 fifteenMinLow.SetStyle(Curve.SHORT_DASH);
 fifteenMinLow.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+fifteenMinLow.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
 #End Fifteen Minute Low
 
+def atrAggPeriod = if(!isIntraDay, GetAggregationPeriod(), AggregationPeriod.DAY); 
 #Begin ATR
-def AvgTrueRng = MovingAverage(AverageType.WILDERS, TrueRange(high(period = ”DAY”)[1], close(period = ”DAY”)[1], low(period = ”DAY”)[1]), 14);
+def AvgTrueRng = MovingAverage(AverageType.WILDERS, TrueRange(high(period = atrAggPeriod)[1], close(period = atrAggPeriod)[1], low(period = atrAggPeriod)[1]), 14);
 AddLabel(yes, "ATR: " + AvgTrueRng, color = Color.WHITE);
-def DailyClose = close(period = ”DAY”)[1];
+def DailyClose = close(period = atrAggPeriod)[1];
 
-plot HighATR = DailyClose + AvgTrueRng;
+def highAtrLevel = if(IsNaN(close[-1]), if(!IsNaN(highAtrLevel[1]) and !IsNaN(close[10]), highAtrLevel[1], DailyClose + AvgTrueRng), Double.NaN);
+plot HighATR = highAtrLevel;
 HighATR.SetDefaultColor(color = Color.RED);
 HighATR.SetStyle(Curve.SHORT_DASH);
+HighATR.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
 
-plot LowATR = DailyClose - AvgTrueRng;
+AddChartBubble(IsNaN(HighATR[11]) and !IsNaN(HighATR[10]), HighATR, "ATR High", color = Color.RED);
+
+def lowAtrLevel = if(IsNaN(close[-1]), if(!IsNaN(lowAtrLevel[1]) and !IsNaN(close[10]), lowAtrLevel[1], DailyClose - AvgTrueRng), Double.NaN);
+plot LowATR = lowAtrLevel;
 LowATR.SetDefaultColor(color = Color.GREEN);
 LowATR.SetStyle(Curve.SHORT_DASH);
+LowATR.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+
+AddChartBubble(IsNaN(LowATR[11]) and !IsNaN(LowATR[10]), LowATR, "ATR Low", color = Color.GREEN, up = No);
+
 #End ATR
 
 #Begin 52 Week H/L
-plot FiftyTwoWeekHigh = Highest(high(period = AggregationPeriod.DAY),252);
+plot FiftyTwoWeekHigh = if(!isIntraDay, Double.NaN, Highest(high(period = AggregationPeriod.DAY),252));
 FiftyTwoWeekHigh.SetDefaultColor(color = Color.RED);
 FiftyTwoWeekHigh.SetStyle(Curve.SHORT_DASH);
 
-plot FiftyTwoWeekLow = Lowest(low(period = AggregationPeriod.DAY),252);
+plot FiftyTwoWeekLow = if(!isIntraDay, Double.NaN, Lowest(low(period = AggregationPeriod.DAY),252));
 FiftyTwoWeekLow.SetDefaultColor(color = Color.GREEN);
 FiftyTwoWeekLow.SetStyle(Curve.SHORT_DASH);
 
-AddLabel(yes, "52Wk H/L = " + FiftyTwoWeekHigh + " / " + FiftyTwoWeekLow, Color.WHITE);
+AddLabel(isIntraDay, "52Wk H/L = " + FiftyTwoWeekHigh + " / " + FiftyTwoWeekLow, Color.WHITE);
 #End 52 Week H/L
