@@ -1,0 +1,49 @@
+#Time Relative Volume Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 06/21/2021
+
+#hint: Calculates the simple average of the volume for the same candle over multiple days using the PeriodLookBack for the number of days.
+
+input PeriodLookBack = 21; #hint PeriodLookBack: The number of days back used to calculate the average.
+input ShowVolumeHistogram = no; #hint ShowVolumeHistogram: Whether or not to show the volume histogram bars.
+
+declare hide_on_daily;
+declare on_volume;
+declare real_size;
+
+def dayStart = 0000;
+
+def currentAggregationPeriod = GetAggregationPeriod();
+
+def barsPerDay = 86400000 / currentAggregationPeriod;
+
+def foldLength = PeriodLookBack * barsPerDay;
+
+def barTime = Floor((SecondsFromTime(dayStart) * 1000) / currentAggregationPeriod);
+
+def volumeAtTimeSum = 
+(fold ix = 0 to PeriodLookBack with vSum do vSum + 
+    (fold ixx = 0 to barsPerDay with subVSum do
+         subVSum + (if(GetValue(barTime, ((ix+1)*(ixx+1))-1) == barTime, GetValue(volume, ((ix+1)*(ixx+1))-1), 0))));
+
+def avgVolumeAtTime = volumeAtTimeSum / PeriodLookBack;
+
+#plot TimeRelativeVolumeSum = volumeAtTimeSum;
+#TimeRelativeVolumeSum.SetDefaultColor(Color.WHITE);
+
+plot TimeRelativeVolume = avgVolumeAtTime;
+TimeRelativeVolume.SetDefaultColor(Color.WHITE);
+
+plot HighVolumeSignal = if(volume > avgVolumeAtTime, avgVolumeAtTime, Double.NaN);
+HighVolumeSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+HighVolumeSignal.SetDefaultColor(Color.LIME);
+HighVolumeSignal.SetLineWeight(2);
+
+
+plot VolumeSignal = volume;
+VolumeSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HISTOGRAM);
+VolumeSignal.SetDefaultColor(Color.GRAY);
+VolumeSignal.SetHiding(!ShowVolumeHistogram);
+
+AddLabel(yes, "Avg Vol for Candle: " + TimeRelativeVolume, (if (volume > avgVolumeAtTime) then Color.GREEN else Color.LIGHT_GRAY));
