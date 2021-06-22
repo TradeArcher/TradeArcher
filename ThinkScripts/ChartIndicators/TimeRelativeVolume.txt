@@ -1,6 +1,6 @@
 #Time Relative Volume Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 06/21/2021
 
 #hint: Calculates the simple average of the volume for the same candle over multiple days using the PeriodLookBack for the number of days.
@@ -46,4 +46,4 @@ VolumeSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HISTOGRAM);
 VolumeSignal.SetDefaultColor(Color.GRAY);
 VolumeSignal.SetHiding(!ShowVolumeHistogram);
 
-AddLabel(yes, "Avg Vol for Candle: " + TimeRelativeVolume, (if (volume > avgVolumeAtTime) then Color.GREEN else Color.LIGHT_GRAY));
+AddLabel(yes, "Avg Vol for Candle: " + avgVolumeAtTime + (if (volume > avgVolumeAtTime) then " (ABOVE AVG)" else ""), (if (volume > avgVolumeAtTime) then Color.GREEN else Color.LIGHT_GRAY));
