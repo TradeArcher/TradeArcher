@@ -1,44 +1,116 @@
-#Stacked EMA Pullback Strategy Scan
+#Stacked EMA Pullback Scan
 #Author: TradeArcher2020
-#Version: 0.1
-#Date Created: 01/18/2021
+#Version: 0.4
+#Date Created: 01/17/2021
 
 input includePremarket = yes;
 
 def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
 
 #Begin Strategy Specific Inputs
-input emaPeriod1 = 8;
+input emaPeriod1 = 13;
 input emaPeriod2 = 21;
 input emaPeriod3 = 34;
 input emaPeriod4 = 55;
-input emaPeriod5 = 84;
-input emaPeriod6 = 200;
-input hullMAPeriod = 6;
+input emaPeriod5 = 89;
+input emaPeriod6 = 144;
 
-input recentHighPeriod = 5;
+input price = {default "Close", "Low", "CandleBodyLow"};
+input statsLookAhead = 5;
 
-def buyPrice = low; 
-def sellPrice = high;
+#input recentHighPeriod = 5;
+#input showBubbles = yes;
+input minBubbleExpansion = 3;
+
+def buyPrice; 
+switch (price) {
+case "Close":
+    buyPrice = close;
+case "Low":
+    buyPrice = low;
+case "CandleBodyLow":
+    buyPrice = if(close < open, close, open);
+}
+def close52 = close[252];
+#def buyPrice = close;#(priceType = PriceType.MARK);#if(close < open, close, open);
+
 #End Strategy Specific Inputs
 
 #***********************************************************************
 #Begin Strategy specific code
 
 def ema1 = MovAvgExponential(length = emaPeriod1);
+
 def ema2 = MovAvgExponential(length = emaPeriod2);
+
 def ema3 = MovAvgExponential(length = emaPeriod3);
+
 def ema4 = MovAvgExponential(length = emaPeriod4);
+
 def ema5 = MovAvgExponential(length = emaPeriod5);
+
 def ema6 = MovAvgExponential(length = emaPeriod6);
 
-#***********************************************************************
-#Begin Buy Order Section
-
-def purchasePrice = buyPrice + (ema2 - buyPrice);
-def exitPrice = if(sellPrice >= ema1, sellPrice - (sellPrice - ema1), sellPrice);
-
 def areEMAsStacked = ema1 > ema2 and ema2 > ema3 and ema3 > ema4 and ema4 > ema5 and ema5 > ema6;
-def meetsBuyLevel = (buyPrice[1] > ema1 within recentHighPeriod bars) and buyPrice[0] <= ema2 and buyPrice[0] > ema3;
 
-plot buy = areEMAsStacked and meetsBuyLevel and isWithinTradingHours;
+#Begin Stats
+def staysAboveEma2 = fold ix1 = 1 to statsLookAhead with b1 = no do if(b1 or GetValue(buyPrice, -ix1) < GetValue(ema1, -ix1), yes, no);
+def ema1Support = areEMAsStacked and buyPrice < ema1 and buyPrice > ema2 and if(IsNaN(staysAboveEma2), no, staysAboveEma2) and buyPrice[-statsLookAhead] > ema1 within statsLookAhead bars;
+def ema1SupportCount = TotalSum(ema1Support);
+
+def staysAboveEma3 = fold ix2 = 1 to statsLookAhead with b2 = no do if(b2 or GetValue(buyPrice, -ix2) < GetValue(ema2, -ix2), yes, no);
+def ema2Support = if(areEMAsStacked and buyPrice < ema2 and buyPrice > ema3 and if(IsNaN(staysAboveEma3), no, staysAboveEma3) and buyPrice[-statsLookAhead] > ema2 within statsLookAhead bars, 1, 0);
+def ema2SupportCount = TotalSum(ema2Support);
+
+
+def staysAboveEma4 = fold ix3 = 1 to statsLookAhead with b3 = no do if(b3 or GetValue(buyPrice, -ix3) < GetValue(ema3, -ix3), yes, no);
+def ema3Support = if(areEMAsStacked and buyPrice < ema3 and buyPrice > ema4 and if(IsNaN(staysAboveEma4), no, staysAboveEma4) and buyPrice[-statsLookAhead] > ema3 within statsLookAhead bars, 1, 0);
+def ema3SupportCount = TotalSum(ema3Support);
+
+def staysAboveEma5 = fold ix4 = 1 to statsLookAhead with b4 = no do if(b4 or GetValue(buyPrice, -ix4) < GetValue(ema4, -ix4), yes, no);
+def ema4Support = if(areEMAsStacked and buyPrice < ema4 and buyPrice > ema4 and if(IsNaN(staysAboveEma5), no, staysAboveEma5) and buyPrice[-statsLookAhead] > ema4 within statsLookAhead bars, 1, 0);
+def ema4SupportCount = TotalSum(ema4Support);
+
+def staysAboveEma6 = fold ix5 = 1 to statsLookAhead with b5 = no do if(b5 or GetValue(buyPrice, -ix5) < GetValue(ema5, -ix5), yes, no);
+def ema5Support = if(areEMAsStacked and buyPrice < ema5 and buyPrice > ema5 and if(IsNaN(staysAboveEma6), no, staysAboveEma6) and buyPrice[-statsLookAhead] > ema5 within statsLookAhead bars, 1, 0);
+def ema5SupportCount = TotalSum(ema5Support);
+
+def keySupportEMA;
+def keySupportEMALower;
+def keySupportEMAUpper;
+if (ema1supportCount >= ema2SupportCount and ema1supportCount >= ema3SupportCount and ema1supportCount >= ema4SupportCount and ema1supportCount >= ema5SupportCount) then {
+keySupportEMA = emaPeriod2;
+keySupportEMALower = if(areEMAsStacked, ema2, Double.NaN);
+keySupportEMAUpper = if(areEMAsStacked, ema1, Double.NaN);
+} 
+else if (ema2supportCount >= ema1SupportCount and ema2supportCount >= ema3SupportCount and ema2supportCount >= ema4SupportCount and ema2supportCount >= ema5SupportCount) then {
+keySupportEMA = emaPeriod3;
+keySupportEMALower = if(areEMAsStacked, ema3, Double.NaN);
+keySupportEMAUpper = if(areEMAsStacked, ema2, Double.NaN);
+}
+else if (ema3supportCount >= ema1SupportCount and ema3supportCount >= ema2SupportCount and ema3supportCount >= ema4SupportCount and ema3supportCount >= ema5SupportCount) then {
+keySupportEMA = emaPeriod4;
+keySupportEMALower = if(areEMAsStacked, ema4, Double.NaN);
+keySupportEMAUpper = if(areEMAsStacked, ema3, Double.NaN);
+}
+else if (ema4supportCount >= ema1SupportCount and ema4supportCount >= ema2SupportCount and ema4supportCount >= ema3SupportCount and ema4supportCount >= ema5SupportCount) then {
+keySupportEMA = emaPeriod5;
+keySupportEMALower = if(areEMAsStacked, ema5, Double.NaN);
+keySupportEMAUpper = if(areEMAsStacked, ema4, Double.NaN);
+}
+else {
+keySupportEMA = emaPeriod1;
+keySupportEMALower = if(areEMAsStacked, ema1, Double.NaN);
+keySupportEMAUpper = if(areEMAsStacked, if(close < open, close, open), Double.NaN);
+}
+
+#***********************************************************************
+#Begin Buy Signal Section
+
+def meetsBuyLevel = buyPrice > keySupportEMALower and buyPrice < keySupportEMAUpper;
+
+def shouldBuy = areEMAsStacked and meetsBuyLevel and isWithinTradingHours;
+
+plot buySignal = shouldBuy;
+
+#Alert(buySignal, "StackedEMAPullbackStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
