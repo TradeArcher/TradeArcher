@@ -1,0 +1,15 @@
+#% Off Loww After High Column
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 07/13/2021
+
+def fiftyTwoWeekHighBarNumber = if Highest(high, 252) == high then BarNumber() else fiftyTwoWeekHighBarNumber[1];
+def currentBarNumber = BarNumber();
+def barsSinceHigh = currentBarNumber - fiftyTwoWeekHighBarNumber;
+
+def lowestSinceHigh = fold ix = 1 to if(IsNaN(barsSinceHigh) or barsSinceHigh < 1, 1, barsSinceHigh) with l = low do if(l > GetValue(low, ix), GetValue(low, ix), l);
+
+def current = close;
+def isDown = current < lowestSinceHigh;
+plot perentOffLow = if(isDown, ((lowestSinceHigh - current) / lowestSinceHigh * 100), ((current - lowestSinceHigh) / current * 100));
+perentOffLow.AssignValueColor(if isDown then Color.DOWNTICK else Color.UPTICK);

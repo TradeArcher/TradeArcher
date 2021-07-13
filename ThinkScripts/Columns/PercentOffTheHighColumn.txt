@@ -1,0 +1,11 @@
+#% Off High Column
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 07/13/2021
+
+def ftwh = Highest(high, 252);
+def h = if(IsNaN(ftwh), HighestAll(high), ftwh);
+def current = close;
+def isDown = current < h;
+plot perentOffHigh = if(isDown, ((h - current) / h * 100), ((current - h) / current * 100));
+perentOffHigh.AssignValueColor(if isDown then Color.DOWNTICK else Color.UPTICK);
