@@ -1,0 +1,9 @@
+#Days Since 52 Week High Column
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 07/13/2021
+#Description: Use the Day (D) setting for the column script to make this work correctly.  
+
+def fiftyTwoWeekHighBarNumber = if Highest(high, 252) == high then BarNumber() else fiftyTwoWeekHighBarNumber[1];
+def currentBarNumber = BarNumber();
+plot barsSinceHigh = Round(currentBarNumber - fiftyTwoWeekHighBarNumber, 0);
