@@ -1,6 +1,6 @@
 #Stacked EMA Pullback Indicator
 #Author: TradeArcher2020
-#Version: 0.3
+#Version: 0.4
 #Date Created: 01/17/2021
 
 input includePremarket = yes;
@@ -22,6 +22,9 @@ input statsLookAhead = 5;
 input recentHighPeriod = 5;
 input showBubbles = yes;
 input minBubbleExpansion = 3;
+input showBuySignals = no;
+input showBuyCrossUpSignal = no;
+input enableAlerts = no;
 
 def buyPrice; 
 switch (price) {
@@ -54,6 +57,7 @@ DefineGlobalColor("MedianEMA", Color.WHITE);
 DefineGlobalColor("SupportEMA", Color.LIME);
 DefineGlobalColor("StopLossEMA", Color.DARK_RED);
 DefineGlobalColor("BuySignal", Color.LIME);
+DefineGlobalColor("BuyCrossUpSignal", Color.LIGHT_GREEN);
 DefineGlobalColor("SellSignal", Color.LIME);
 
 DefineGlobalColor("EMA1", Color.CYAN);
@@ -130,31 +134,31 @@ def areEMAsStacked = ema1 > ema2 and ema2 > ema3 and ema3 > ema4 and ema4 > ema5
 
 #Begin Stats
 def staysAboveEma2 = fold ix1 = 1 to statsLookAhead with b1 = no do if(b1 or GetValue(buyPrice, -ix1) < GetValue(ema1, -ix1), yes, no);
-def ema1Support = areEMAsStacked and buyPrice < ema1 and buyPrice > ema2 and if(IsNaN(staysAboveEma2), no, staysAboveEma2) and buyPrice[-statsLookAhead] > ema1 within statsLookAhead bars;
+def ema1Support = if(areEMAsStacked and buyPrice < ema1 and buyPrice > ema2 and if(IsNaN(staysAboveEma2), no, staysAboveEma2) and buyPrice[-statsLookAhead] > ema1 within statsLookAhead bars and !(buyPrice[-statsLookAhead] < ema2) within statsLookAhead bars, 1, 0);
 def ema1SupportCount = TotalSum(ema1Support);
 AddLabel(yes, emaPeriod2 + " EMA Support Count: " + ema1SupportCount, GlobalColor("EMA2"));
 
 
 def staysAboveEma3 = fold ix2 = 1 to statsLookAhead with b2 = no do if(b2 or GetValue(buyPrice, -ix2) < GetValue(ema2, -ix2), yes, no);
-def ema2Support = if(areEMAsStacked and buyPrice < ema2 and buyPrice > ema3 and if(IsNaN(staysAboveEma3), no, staysAboveEma3) and buyPrice[-statsLookAhead] > ema2 within statsLookAhead bars, 1, 0);
+def ema2Support = if(areEMAsStacked and buyPrice < ema2 and buyPrice > ema3 and if(IsNaN(staysAboveEma3), no, staysAboveEma3) and buyPrice[-statsLookAhead] > ema2 within statsLookAhead bars and !(buyPrice[-statsLookAhead] < ema3) within statsLookAhead bars, 1, 0);
 def ema2SupportCount = TotalSum(ema2Support);
 AddLabel(yes, emaPeriod3 + " EMA Support Count: " + ema2SupportCount, GlobalColor("EMA3"));
 
 
 def staysAboveEma4 = fold ix3 = 1 to statsLookAhead with b3 = no do if(b3 or GetValue(buyPrice, -ix3) < GetValue(ema3, -ix3), yes, no);
-def ema3Support = if(areEMAsStacked and buyPrice < ema3 and buyPrice > ema4 and if(IsNaN(staysAboveEma4), no, staysAboveEma4) and buyPrice[-statsLookAhead] > ema3 within statsLookAhead bars, 1, 0);
+def ema3Support = if(areEMAsStacked and buyPrice < ema3 and buyPrice > ema4 and if(IsNaN(staysAboveEma4), no, staysAboveEma4) and buyPrice[-statsLookAhead] > ema3 within statsLookAhead bars and !(buyPrice[-statsLookAhead] < ema4) within statsLookAhead bars, 1, 0);
 def ema3SupportCount = TotalSum(ema3Support);
 AddLabel(yes, emaPeriod4 + " EMA Support Count: " + ema3SupportCount, GlobalColor("EMA4"));
 
 
 def staysAboveEma5 = fold ix4 = 1 to statsLookAhead with b4 = no do if(b4 or GetValue(buyPrice, -ix4) < GetValue(ema4, -ix4), yes, no);
-def ema4Support = if(areEMAsStacked and buyPrice < ema4 and buyPrice > ema4 and if(IsNaN(staysAboveEma5), no, staysAboveEma5) and buyPrice[-statsLookAhead] > ema4 within statsLookAhead bars, 1, 0);
+def ema4Support = if(areEMAsStacked and buyPrice < ema4 and buyPrice > ema5 and if(IsNaN(staysAboveEma5), no, staysAboveEma5) and buyPrice[-statsLookAhead] > ema4 within statsLookAhead bars and !(buyPrice[-statsLookAhead] < ema5) within statsLookAhead bars, 1, 0);
 def ema4SupportCount = TotalSum(ema4Support);
 AddLabel(yes, emaPeriod5 + " EMA Support Count: " + ema4SupportCount, GlobalColor("EMA5"));
 
 
 def staysAboveEma6 = fold ix5 = 1 to statsLookAhead with b5 = no do if(b5 or GetValue(buyPrice, -ix5) < GetValue(ema5, -ix5), yes, no);
-def ema5Support = if(areEMAsStacked and buyPrice < ema5 and buyPrice > ema5 and if(IsNaN(staysAboveEma6), no, staysAboveEma6) and buyPrice[-statsLookAhead] > ema5 within statsLookAhead bars, 1, 0);
+def ema5Support = if(areEMAsStacked and buyPrice < ema5 and buyPrice > ema5 and if(IsNaN(staysAboveEma6), no, staysAboveEma6) and buyPrice[-statsLookAhead] > ema5 within statsLookAhead bars and !(buyPrice[-statsLookAhead] < ema6) within statsLookAhead bars, 1, 0);
 def ema5SupportCount = TotalSum(ema5Support);
 AddLabel(yes, emaPeriod6 + " EMA Support Count: " + ema5SupportCount, GlobalColor("EMA6"));
 
@@ -183,26 +187,36 @@ keySupportEMAUpper = if(areEMAsStacked, ema4, Double.NaN);
 }
 else {
 keySupportEMA = emaPeriod1;
-keySupportEMALower = if(areEMAsStacked, ema1, Double.NaN);
+keySupportEMALower = if(areEMAsStacked, ema6, Double.NaN);
+#keySupportEMAUpper = if(areEMAsStacked, ema5, Double.NaN);
 keySupportEMAUpper = if(areEMAsStacked, if(close < open, close, open), Double.NaN);
 }
 
-AddLabel(yes, "Key Support: " + keySupportEMA + " EMA", if keySupportEMA == emaPeriod2 then GlobalColor("EMA2") else if keySupportEMA == emaPeriod3 then GlobalColor("EMA3") else if keySupportEMA == emaPeriod4 then GlobalColor("EMA4") else if keySupportEMA == emaPeriod5 then GlobalColor("EMA5") else GlobalColor("EMA1"));
+AddLabel(yes, "Key Support: " + keySupportEMA + " EMA", if keySupportEMA == emaPeriod2 then GlobalColor("EMA2") else if keySupportEMA == emaPeriod3 then GlobalColor("EMA3") else if keySupportEMA == emaPeriod4 then GlobalColor("EMA4") else if keySupportEMA == emaPeriod5 then GlobalColor("EMA5") else GlobalColor("EMA6"));
 
+
+AddCloud(if(keySupportEMA == emaPeriod1, keySupportEMAUpper, Double.NaN), if(keySupportEMA == emaPeriod1, keySupportEMALower, Double.NaN), GlobalColor("EMA1"));
 AddCloud(if(keySupportEMA == emaPeriod2, keySupportEMAUpper, Double.NaN), if(keySupportEMA == emaPeriod2, keySupportEMALower, Double.NaN), GlobalColor("EMA2"));
 AddCloud(if(keySupportEMA == emaPeriod3, keySupportEMAUpper, Double.NaN), if(keySupportEMA == emaPeriod3, keySupportEMALower, Double.NaN), GlobalColor("EMA3"));
 AddCloud(if(keySupportEMA == emaPeriod4, keySupportEMAUpper, Double.NaN), if(keySupportEMA == emaPeriod4, keySupportEMALower, Double.NaN), GlobalColor("EMA4"));
 AddCloud(if(keySupportEMA == emaPeriod5, keySupportEMAUpper, Double.NaN), if(keySupportEMA == emaPeriod5, keySupportEMALower, Double.NaN), GlobalColor("EMA5"));
+AddCloud(if(keySupportEMA == emaPeriod6, keySupportEMAUpper, Double.NaN), if(keySupportEMA == emaPeriod6, keySupportEMALower, Double.NaN), GlobalColor("EMA6"));
 
 #***********************************************************************
 #Begin Buy Signal Section
 
 def meetsBuyLevel = buyPrice > keySupportEMALower and buyPrice < keySupportEMAUpper;
 
-def shouldBuy = areEMAsStacked and meetsBuyLevel and isWithinTradingHours;
+def shouldBuy = (areEMAsStacked and meetsBuyLevel and isWithinTradingHours);
 
-plot buySignal = shouldBuy;
+plot buySignal = if(showBuySignals, shouldBuy, no);
 buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
 buySignal.SetDefaultColor(GlobalColor("BuySignal"));
 
-Alert(buySignal, "StackedEMAPullbackStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+Alert(enableAlerts and buySignal, "StackedEMAPullbackStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+
+plot buyCrossUpSignal = if(showBuyCrossUpSignal, ema1 crosses above ema2 and areEMAsStacked and isWithinTradingHours, no);
+buyCrossUpSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buyCrossUpSignal.SetDefaultColor(GlobalColor("BuyCrossUpSignal"));
+
+Alert(enableAlerts and buyCrossUpSignal, "StackedEMAPullbackStrategy EMA1 Crossed Above EMA2 Buy Signal for " + GetSymbol(), sound = Sound.Ding);
