@@ -55,45 +55,44 @@ def areEMAsStacked = ema1 > ema2 and ema2 > ema3 and ema3 > ema4 and ema4 > ema5
 
 #Begin Stats
 def staysAboveEma2 = fold ix1 = 1 to statsLookAhead with b1 = no do if(b1 or GetValue(buyPrice, -ix1) < GetValue(ema1, -ix1), yes, no);
-def ema1Support = areEMAsStacked and buyPrice < ema1 and buyPrice > ema2 and if(IsNaN(staysAboveEma2), no, staysAboveEma2) and buyPrice[-statsLookAhead] > ema1 within statsLookAhead bars;
+def ema1Support = if(areEMAsStacked and buyPrice < ema1 and buyPrice > ema2 and if(IsNaN(staysAboveEma2), no, staysAboveEma2) and (buyPrice[-statsLookAhead] > ema1 and !(buyPrice[-statsLookAhead] < ema2)) within statsLookAhead bars, 1, 0);
 def ema1SupportCount = TotalSum(ema1Support);
 
+
 def staysAboveEma3 = fold ix2 = 1 to statsLookAhead with b2 = no do if(b2 or GetValue(buyPrice, -ix2) < GetValue(ema2, -ix2), yes, no);
-def ema2Support = if(areEMAsStacked and buyPrice < ema2 and buyPrice > ema3 and if(IsNaN(staysAboveEma3), no, staysAboveEma3) and buyPrice[-statsLookAhead] > ema2 within statsLookAhead bars, 1, 0);
+def ema2Support = if(areEMAsStacked and buyPrice < ema2 and buyPrice > ema3 and if(IsNaN(staysAboveEma3), no, staysAboveEma3) and (buyPrice[-statsLookAhead] > ema2 and !(buyPrice[-statsLookAhead] < ema3)) within statsLookAhead bars, 1, 0);
 def ema2SupportCount = TotalSum(ema2Support);
 
 
 def staysAboveEma4 = fold ix3 = 1 to statsLookAhead with b3 = no do if(b3 or GetValue(buyPrice, -ix3) < GetValue(ema3, -ix3), yes, no);
-def ema3Support = if(areEMAsStacked and buyPrice < ema3 and buyPrice > ema4 and if(IsNaN(staysAboveEma4), no, staysAboveEma4) and buyPrice[-statsLookAhead] > ema3 within statsLookAhead bars, 1, 0);
+def ema3Support = if(areEMAsStacked and buyPrice < ema3 and buyPrice > ema4 and if(IsNaN(staysAboveEma4), no, staysAboveEma4) and (buyPrice[-statsLookAhead] > ema3 and !(buyPrice[-statsLookAhead] < ema4)) within statsLookAhead bars, 1, 0);
 def ema3SupportCount = TotalSum(ema3Support);
 
+
 def staysAboveEma5 = fold ix4 = 1 to statsLookAhead with b4 = no do if(b4 or GetValue(buyPrice, -ix4) < GetValue(ema4, -ix4), yes, no);
-def ema4Support = if(areEMAsStacked and buyPrice < ema4 and buyPrice > ema4 and if(IsNaN(staysAboveEma5), no, staysAboveEma5) and buyPrice[-statsLookAhead] > ema4 within statsLookAhead bars, 1, 0);
+def ema4Support = if(areEMAsStacked and buyPrice < ema4 and buyPrice > ema5 and if(IsNaN(staysAboveEma5), no, staysAboveEma5) and (buyPrice[-statsLookAhead] > ema4 and !(buyPrice[-statsLookAhead] < ema5)) within statsLookAhead bars, 1, 0);
 def ema4SupportCount = TotalSum(ema4Support);
 
-def staysAboveEma6 = fold ix5 = 1 to statsLookAhead with b5 = no do if(b5 or GetValue(buyPrice, -ix5) < GetValue(ema5, -ix5), yes, no);
-def ema5Support = if(areEMAsStacked and buyPrice < ema5 and buyPrice > ema5 and if(IsNaN(staysAboveEma6), no, staysAboveEma6) and buyPrice[-statsLookAhead] > ema5 within statsLookAhead bars, 1, 0);
-def ema5SupportCount = TotalSum(ema5Support);
 
 def keySupportEMA;
 def keySupportEMALower;
 def keySupportEMAUpper;
-if (ema1supportCount >= ema2SupportCount and ema1supportCount >= ema3SupportCount and ema1supportCount >= ema4SupportCount and ema1supportCount >= ema5SupportCount) then {
+if (ema1supportCount >= ema2SupportCount and ema1supportCount >= ema3SupportCount and ema1supportCount >= ema4SupportCount) then {
 keySupportEMA = emaPeriod2;
 keySupportEMALower = if(areEMAsStacked, ema2, Double.NaN);
 keySupportEMAUpper = if(areEMAsStacked, ema1, Double.NaN);
 } 
-else if (ema2supportCount >= ema1SupportCount and ema2supportCount >= ema3SupportCount and ema2supportCount >= ema4SupportCount and ema2supportCount >= ema5SupportCount) then {
+else if (ema2supportCount >= ema1SupportCount and ema2supportCount >= ema3SupportCount and ema2supportCount >= ema4SupportCount) then {
 keySupportEMA = emaPeriod3;
 keySupportEMALower = if(areEMAsStacked, ema3, Double.NaN);
 keySupportEMAUpper = if(areEMAsStacked, ema2, Double.NaN);
 }
-else if (ema3supportCount >= ema1SupportCount and ema3supportCount >= ema2SupportCount and ema3supportCount >= ema4SupportCount and ema3supportCount >= ema5SupportCount) then {
+else if (ema3supportCount >= ema1SupportCount and ema3supportCount >= ema2SupportCount and ema3supportCount >= ema4SupportCount) then {
 keySupportEMA = emaPeriod4;
 keySupportEMALower = if(areEMAsStacked, ema4, Double.NaN);
 keySupportEMAUpper = if(areEMAsStacked, ema3, Double.NaN);
 }
-else if (ema4supportCount >= ema1SupportCount and ema4supportCount >= ema2SupportCount and ema4supportCount >= ema3SupportCount and ema4supportCount >= ema5SupportCount) then {
+else if (ema4supportCount >= ema1SupportCount and ema4supportCount >= ema2SupportCount and ema4supportCount >= ema3SupportCount) then {
 keySupportEMA = emaPeriod5;
 keySupportEMALower = if(areEMAsStacked, ema5, Double.NaN);
 keySupportEMAUpper = if(areEMAsStacked, ema4, Double.NaN);
@@ -101,6 +100,7 @@ keySupportEMAUpper = if(areEMAsStacked, ema4, Double.NaN);
 else {
 keySupportEMA = emaPeriod1;
 keySupportEMALower = if(areEMAsStacked, ema1, Double.NaN);
+#keySupportEMAUpper = if(areEMAsStacked, ema5, Double.NaN);
 keySupportEMAUpper = if(areEMAsStacked, if(close < open, close, open), Double.NaN);
 }
 
@@ -109,7 +109,7 @@ keySupportEMAUpper = if(areEMAsStacked, if(close < open, close, open), Double.Na
 
 def meetsBuyLevel = buyPrice > keySupportEMALower and buyPrice < keySupportEMAUpper;
 
-def shouldBuy = areEMAsStacked and meetsBuyLevel and isWithinTradingHours;
+def shouldBuy = (areEMAsStacked and meetsBuyLevel and isWithinTradingHours);
 
 plot buySignal = shouldBuy;
 

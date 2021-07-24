@@ -1,6 +1,6 @@
-#Stacked EMA Pullback Indicator
+#Stacked EMA Pullback Indicator Beta
 #Author: TradeArcher2020
-#Version: 0.4
+#Version: 0.5.1
 #Date Created: 01/17/2021
 
 input includePremarket = yes;
@@ -18,12 +18,14 @@ input hullMAPeriod = 5;
 
 input price = {default "Close", "Low", "CandleBodyLow"};
 input statsLookAhead = 5;
+input statsLookBack = 2;
 
 input recentHighPeriod = 5;
 input showBubbles = yes;
 input minBubbleExpansion = 3;
 input showBuySignals = no;
 input showBuyCrossUpSignal = no;
+input hideIrrelevantLines = no;
 input enableAlerts = no;
 
 def buyPrice; 
@@ -35,17 +37,10 @@ case "Low":
 case "CandleBodyLow":
     buyPrice = if(close < open, close, open);
 }
+
 def sellPrice = close;
 def bn = BarNumber();
 def currentBar = HighestAll(if !IsNaN(close) then bn else Double.NaN);
-#def emaLevel = if(IsNaN(close[-1]), if(!IsNaN(emaLevel[1]) and !IsNaN(close[10]), emaLevel[1], 1), Double.NaN);
-#plot HighATR = highAtrLevel;
-#HighATR.SetDefaultColor(color = Color.RED);
-#HighATR.SetStyle(Curve.SHORT_DASH);
-#HighATR.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
-
-#AddChartBubble(IsNaN(HighATR[11]) and !IsNaN(HighATR[10]), HighATR, "ATR High", color = Color.RED);
-#def isExpansion = if(IsNaN(HighATR[11]) and !IsNaN(HighATR[10]), yes, no);
 
 #End Strategy Specific Inputs
 
@@ -71,59 +66,23 @@ DefineGlobalColor("HullUp", Color.UPTICK);
 DefineGlobalColor("HullDown", Color.DOWNTICK);
 DefineGlobalColor("HullNeutral", Color.LIGHT_GRAY);
 
-plot ema1 = MovAvgExponential(length = emaPeriod1);
-ema1.SetDefaultColor(GlobalColor("EMA1"));
+def ema1 = MovAvgExponential(length = emaPeriod1);
 def ema1Level = if(IsNaN(close[-1]), if(!IsNaN(ema1Level[1]) and !IsNaN(close[minBubbleExpansion+0]), ema1Level[1], ema1), Double.NaN);
-plot LastEMA1 = ema1Level;
-LastEMA1.SetDefaultColor(GlobalColor("EMA1"));
-LastEMA1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
-LastEMA1.SetHiding(!showBubbles);
-AddChartBubble(showBubbles and IsNaN(LastEMA1[minBubbleExpansion+1]) and !IsNaN(LastEMA1[minBubbleExpansion+0]), LastEMA1, emaPeriod1 + " EMA", GlobalColor("EMA1"));
 
-plot ema2 = MovAvgExponential(length = emaPeriod2);
-ema2.SetDefaultColor(GlobalColor("EMA2"));
+def ema2 = MovAvgExponential(length = emaPeriod2);
 def ema2Level = if(IsNaN(close[-1]), if(!IsNaN(ema2Level[1]) and !IsNaN(close[minBubbleExpansion+7]), ema2Level[1], ema2), Double.NaN);
-plot LastEMA2 = ema2Level;
-LastEMA2.SetDefaultColor(GlobalColor("EMA2"));
-LastEMA2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
-LastEMA2.SetHiding(!showBubbles);
-AddChartBubble(showBubbles and IsNaN(LastEMA2[minBubbleExpansion+8]) and !IsNaN(LastEMA2[minBubbleExpansion+7]), LastEMA2, emaPeriod2 + " EMA", GlobalColor("EMA2"));
 
-plot ema3 = MovAvgExponential(length = emaPeriod3);
-ema3.SetDefaultColor(GlobalColor("EMA3"));
+def ema3 = MovAvgExponential(length = emaPeriod3);
 def ema3Level = if(IsNaN(close[-1]), if(!IsNaN(ema3Level[1]) and !IsNaN(close[minBubbleExpansion+14]), ema3Level[1], ema3), Double.NaN);
-plot LastEMA3 = ema3Level;
-LastEMA3.SetDefaultColor(GlobalColor("EMA3"));
-LastEMA3.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
-LastEMA3.SetHiding(!showBubbles);
-AddChartBubble(showBubbles and IsNaN(LastEMA3[minBubbleExpansion+15]) and !IsNaN(LastEMA3[minBubbleExpansion+14]), LastEMA3, emaPeriod3 + " EMA", GlobalColor("EMA3"));
 
-plot ema4 = MovAvgExponential(length = emaPeriod4);
-ema4.SetDefaultColor(GlobalColor("EMA4"));
+def ema4 = MovAvgExponential(length = emaPeriod4);
 def ema4Level = if(IsNaN(close[-1]), if(!IsNaN(ema4Level[1]) and !IsNaN(close[minBubbleExpansion+21]), ema4Level[1], ema4), Double.NaN);
-plot LastEMA4 = ema4Level;
-LastEMA4.SetDefaultColor(GlobalColor("EMA4"));
-LastEMA4.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
-LastEMA4.SetHiding(!showBubbles);
-AddChartBubble(showBubbles and IsNaN(LastEMA4[minBubbleExpansion+22]) and !IsNaN(LastEMA1[minBubbleExpansion+21]), LastEMA4, emaPeriod4 + " EMA", GlobalColor("EMA4"));
 
-plot ema5 = MovAvgExponential(length = emaPeriod5);
-ema5.SetDefaultColor(GlobalColor("EMA5"));
+def ema5 = MovAvgExponential(length = emaPeriod5);
 def ema5Level = if(IsNaN(close[-1]), if(!IsNaN(ema5Level[1]) and !IsNaN(close[minBubbleExpansion+28]), ema5Level[1], ema5), Double.NaN);
-plot LastEMA5 = ema5Level;
-LastEMA5.SetDefaultColor(GlobalColor("EMA5"));
-LastEMA5.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
-LastEMA5.SetHiding(!showBubbles);
-AddChartBubble(showBubbles and IsNaN(LastEMA5[minBubbleExpansion+29]) and !IsNaN(LastEMA5[minBubbleExpansion+28]), LastEMA5, emaPeriod5 + " EMA", GlobalColor("EMA5"));
 
-plot ema6 = MovAvgExponential(length = emaPeriod6);
-ema6.SetDefaultColor(GlobalColor("EMA6"));
+def ema6 = MovAvgExponential(length = emaPeriod6);
 def ema6Level = if(IsNaN(close[-1]), if(!IsNaN(ema6Level[1]) and !IsNaN(close[minBubbleExpansion+36]), ema6Level[1], ema6), Double.NaN);
-plot LastEMA6 = ema6Level;
-LastEMA6.SetDefaultColor(GlobalColor("EMA6"));
-LastEMA6.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
-LastEMA6.SetHiding(!showBubbles);
-AddChartBubble(showBubbles and IsNaN(LastEMA6[minBubbleExpansion+37]) and !IsNaN(LastEMA6[minBubbleExpansion+36]), LastEMA6, emaPeriod6 + " EMA", GlobalColor("EMA6"));
 
 plot hullMA = HullMovingAvg(length = hullMAPeriod);
 def hullMADirection = if hullMA[1] < hullMA then 1 else if hullMA[1] > hullMA then -1 else 0;
@@ -205,7 +164,7 @@ AddCloud(if(keySupportEMA == emaPeriod6, keySupportEMAUpper, Double.NaN), if(key
 #***********************************************************************
 #Begin Buy Signal Section
 
-def meetsBuyLevel = buyPrice > keySupportEMALower and buyPrice < keySupportEMAUpper;
+def meetsBuyLevel = buyPrice > keySupportEMALower and buyPrice < keySupportEMAUpper and buyPrice > keySupportEMALower within statsLookBack bars;
 
 def shouldBuy = (areEMAsStacked and meetsBuyLevel and isWithinTradingHours);
 
@@ -218,5 +177,64 @@ Alert(enableAlerts and buySignal, "StackedEMAPullbackStrategy Buy Signal for " +
 plot buyCrossUpSignal = if(showBuyCrossUpSignal, ema1 crosses above ema2 and areEMAsStacked and isWithinTradingHours, no);
 buyCrossUpSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
 buyCrossUpSignal.SetDefaultColor(GlobalColor("BuyCrossUpSignal"));
+
+plot EMA1Line = if(hideIrrelevantLines, if((keySupportEMA == emaPeriod1 or keySupportEMA == emaPeriod2) and areEMAsStacked, ema1, Double.NaN), ema1);
+EMA1Line.SetDefaultColor(GlobalColor("EMA1"));
+plot LastEMA1 = ema1Level;
+LastEMA1.SetDefaultColor(GlobalColor("EMA1"));
+LastEMA1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastEMA1.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastEMA1[minBubbleExpansion+1]) and !IsNaN(LastEMA1[minBubbleExpansion+0]), LastEMA1, emaPeriod1 + " EMA", GlobalColor("EMA1"));
+
+#EMA1Line.SetHiding((hideIrrelevantLines and keySupportEMA != emaPeriod1) or !areEMAsStacked);
+
+plot EMA2Line = if(hideIrrelevantLines, if((keySupportEMA == emaPeriod2 or keySupportEMA == emaPeriod3) and areEMAsStacked, ema2, Double.NaN), ema2);
+EMA2Line.SetDefaultColor(GlobalColor("EMA2"));
+plot LastEMA2 = ema2Level;
+LastEMA2.SetDefaultColor(GlobalColor("EMA2"));
+LastEMA2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastEMA2.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastEMA2[minBubbleExpansion+8]) and !IsNaN(LastEMA2[minBubbleExpansion+7]), LastEMA2, emaPeriod2 + " EMA", GlobalColor("EMA2"));
+
+#ema2.SetHiding((hideIrrelevantLines and keySupportEMA != emaPeriod2) or !areEMAsStacked);
+plot EMA3Line = if(hideIrrelevantLines, if((keySupportEMA == emaPeriod3 or keySupportEMA == emaPeriod4) and areEMAsStacked, ema3, Double.NaN), ema3);
+EMA3Line.SetDefaultColor(GlobalColor("EMA3"));
+plot LastEMA3 = ema3Level;
+LastEMA3.SetDefaultColor(GlobalColor("EMA3"));
+LastEMA3.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastEMA3.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastEMA3[minBubbleExpansion+15]) and !IsNaN(LastEMA3[minBubbleExpansion+14]), LastEMA3, emaPeriod3 + " EMA", GlobalColor("EMA3"));
+
+#ema3.SetHiding((hideIrrelevantLines and keySupportEMA != emaPeriod3) or !areEMAsStacked);
+
+plot EMA4Line = if(hideIrrelevantLines, if((keySupportEMA == emaPeriod4 or keySupportEMA == emaPeriod5) and areEMAsStacked, ema4, Double.NaN), ema4);
+EMA4Line.SetDefaultColor(GlobalColor("EMA4"));
+plot LastEMA4 = ema4Level;
+LastEMA4.SetDefaultColor(GlobalColor("EMA4"));
+LastEMA4.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastEMA4.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastEMA4[minBubbleExpansion+22]) and !IsNaN(LastEMA4[minBubbleExpansion+21]), LastEMA4, emaPeriod4 + " EMA", GlobalColor("EMA4"));
+
+#ema4.SetHiding((hideIrrelevantLines and keySupportEMA != emaPeriod4) or !areEMAsStacked);
+
+plot EMA5Line = if(hideIrrelevantLines, if((keySupportEMA == emaPeriod5 or keySupportEMA == emaPeriod6) and areEMAsStacked, ema5, Double.NaN), ema5);
+EMA5Line.SetDefaultColor(GlobalColor("EMA5"));
+plot LastEMA5 = ema5Level;
+LastEMA5.SetDefaultColor(GlobalColor("EMA5"));
+LastEMA5.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastEMA5.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastEMA5[minBubbleExpansion+29]) and !IsNaN(LastEMA5[minBubbleExpansion+28]), LastEMA5, emaPeriod5 + " EMA", GlobalColor("EMA5"));
+
+#ema5.SetHiding((hideIrrelevantLines and keySupportEMA != emaPeriod5) or !areEMAsStacked);
+
+plot EMA6Line = if(hideIrrelevantLines, if((keySupportEMA == emaPeriod6) and areEMAsStacked, ema6, Double.NaN), ema6);
+EMA6Line.SetDefaultColor(GlobalColor("EMA6"));
+plot LastEMA6 = ema6Level;
+LastEMA6.SetDefaultColor(GlobalColor("EMA6"));
+LastEMA6.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastEMA6.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastEMA6[minBubbleExpansion+37]) and !IsNaN(LastEMA6[minBubbleExpansion+36]), LastEMA6, emaPeriod6 + " EMA", GlobalColor("EMA6"));
+
+#ema6.SetHiding((hideIrrelevantLines and keySupportEMA != emaPeriod6) or !areEMAsStacked);
 
 Alert(enableAlerts and buyCrossUpSignal, "StackedEMAPullbackStrategy EMA1 Crossed Above EMA2 Buy Signal for " + GetSymbol(), sound = Sound.Ding);
