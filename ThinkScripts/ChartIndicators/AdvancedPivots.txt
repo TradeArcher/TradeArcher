@@ -1,0 +1,121 @@
+#Advanced Pivots
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 07/25/2021
+#Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script.
+
+input PivotSource = {default "HLC3", "HLOC4", "VWAP", "Close", "Open", "HLOCVWAP5", "HLCVWAP4"};
+def aggregationPeriod = AggregationPeriod.DAY;
+def PH = high(period = AggregationPeriod.DAY)[1];
+def PL = low(period = AggregationPeriod.DAY)[1];
+def PC = close(period = AggregationPeriod.DAY)[1];
+def PO = open(period = AggregationPeriod.DAY)[1];
+def prevDaysVWAP = vwap(period = AggregationPeriod.DAY)[1];
+def PS;
+switch (PivotSource) {
+    case "HLC3":
+        PS = (PH + PL + PC) / 3;
+    case "HLOC4":
+        PS = (PH + PL + PC + PO) / 4;
+    case "VWAP":
+        PS = prevDaysVWAP;
+    case "Close":
+        PS = PC;
+    case "Open":
+        PS = PO;
+    case "HLCVWAP4":
+        PS = (PH + PL + PC + prevDaysVWAP) / 4;
+    case "HLOCVWAP5":
+        PS = (PH + PL + PC + PO + prevDaysVWAP) / 5;
+}
+
+def PPP;
+def RR1;
+def RR2;
+def RR3;
+def RR4; 
+def SS1;
+def SS2;
+def SS3;
+def SS4;
+
+plot R4 = HighestAll(RR4);
+plot R3 = HighestAll(RR3);
+plot R2 = HighestAll(RR2);
+plot R1 = HighestAll(RR1);
+plot PP = HighestAll(PPP);
+plot S1 = HighestAll(SS1);
+plot S2 = HighestAll(SS2);
+plot S3 = HighestAll(SS3);
+plot S4 = HighestAll(SS4);
+
+#if showOnlyToday and !IsNaN(close(period = aggregationPeriod)[-1])
+if !IsNaN(close(period = aggregationPeriod)[-1])
+then {
+  
+    RR1 = Double.NaN;
+    RR2 = Double.NaN;
+    RR3 = Double.NaN;
+    RR4 = Double.NaN;
+    PPP = Double.NaN;
+    SS1 = Double.NaN;
+    SS2 = Double.NaN;
+    SS3 = Double.NaN;
+    SS4 = Double.NaN;
+
+} else {
+
+    PPP = PS;
+    RR1 = 2 * PPP - PL;
+    RR2 = PPP + (PH - PL);
+    RR3 = 2 * PPP + (PH - 2 * PL);
+    RR4 = PH + 3 * (PPP - PL);
+    SS1 = 2 * PPP - PH;
+    SS2 = PPP - (PH - PL);
+    SS3 = 2 * PPP - (2 * PH - PL);
+    SS4 = PL - 3 * (PH - PPP);
+}
+
+DefineGlobalColor("Resistance", Color.DARK_RED);
+DefineGlobalColor("Neutral", Color.LIGHT_GRAY);
+DefineGlobalColor("Support", Color.DARK_GREEN);
+R4.SetDefaultColor(GlobalColor("Resistance"));
+R3.SetDefaultColor(GlobalColor("Resistance"));
+R2.SetDefaultColor(GlobalColor("Resistance"));
+R1.SetDefaultColor(GlobalColor("Resistance"));
+PP.SetDefaultColor(GlobalColor("Neutral"));
+S1.SetDefaultColor(GlobalColor("Support"));
+S2.SetDefaultColor(GlobalColor("Support"));
+S3.SetDefaultColor(GlobalColor("Support"));
+S4.SetDefaultColor(GlobalColor("Support"));
+
+R4.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R3.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R2.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R1.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+PP.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S1.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S2.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S3.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S4.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+R4.SetStyle(Curve.MEDIUM_DASH);
+R3.SetStyle(Curve.MEDIUM_DASH);
+R2.SetStyle(Curve.MEDIUM_DASH);
+R1.SetStyle(Curve.MEDIUM_DASH);
+PP.SetStyle(Curve.MEDIUM_DASH);
+S1.SetStyle(Curve.MEDIUM_DASH);
+S2.SetStyle(Curve.MEDIUM_DASH);
+S3.SetStyle(Curve.MEDIUM_DASH);
+S4.SetStyle(Curve.MEDIUM_DASH);
+
+
+R4.SetLineWeight(2);
+R3.SetLineWeight(2);
+R2.SetLineWeight(2);
+R1.SetLineWeight(2);
+PP.SetLineWeight(2);
+S1.SetLineWeight(2);
+S2.SetLineWeight(2);
+S3.SetLineWeight(2);
+S4.SetLineWeight(2);
