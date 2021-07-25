@@ -1,6 +1,6 @@
 #Advanced Pivots
 #Author: TradeArcher2020
-#Version: 0.2
+#Version: 0.3
 #Date Created: 07/25/2021
 #Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script.
 
@@ -40,15 +40,15 @@ def SS2;
 def SS3;
 def SS4;
 
-plot R4 = RR4;#HighestAll(RR4);
-plot R3 = RR3;#HighestAll(RR3);
-plot R2 = RR2;#HighestAll(RR2);
-plot R1 = RR1;#HighestAll(RR1);
-plot PP = PPP;#HighestAll(PPP);
-plot S1 = SS1;#HighestAll(SS1);
-plot S2 = SS2;#HighestAll(SS2);
-plot S3 = SS3;#HighestAll(SS3);
-plot S4 = SS4;#HighestAll(SS4);
+plot R4 = if(!showOnlyToday, RR4, HighestAll(RR4));
+plot R3 = if(!showOnlyToday, RR3, HighestAll(RR3));
+plot R2 = if(!showOnlyToday, RR2, HighestAll(RR2));
+plot R1 = if(!showOnlyToday, RR1, HighestAll(RR1));
+plot PP = if(!showOnlyToday, PPP, HighestAll(PPP));
+plot S1 = if(!showOnlyToday, SS1, HighestAll(SS1));
+plot S2 = if(!showOnlyToday, SS2, HighestAll(SS2));
+plot S3 = if(!showOnlyToday, SS3, HighestAll(SS3));
+plot S4 = if(!showOnlyToday, SS4, HighestAll(SS4));
 
 if showOnlyToday and !IsNaN(PC[-1])
 then {
