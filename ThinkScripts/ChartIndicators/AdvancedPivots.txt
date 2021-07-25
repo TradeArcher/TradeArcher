@@ -1,16 +1,17 @@
 #Advanced Pivots
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 07/25/2021
 #Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script.
 
+input aggregationPeriod = AggregationPeriod.DAY;
+input showOnlyToday = no;
 input PivotSource = {default "HLC3", "HLOC4", "VWAP", "Close", "Open", "HLOCVWAP5", "HLCVWAP4"};
-def aggregationPeriod = AggregationPeriod.DAY;
-def PH = high(period = AggregationPeriod.DAY)[1];
-def PL = low(period = AggregationPeriod.DAY)[1];
-def PC = close(period = AggregationPeriod.DAY)[1];
-def PO = open(period = AggregationPeriod.DAY)[1];
-def prevDaysVWAP = vwap(period = AggregationPeriod.DAY)[1];
+def PH = high(period = aggregationPeriod)[1];
+def PL = low(period = aggregationPeriod)[1];
+def PC = close(period = aggregationPeriod)[1];
+def PO = open(period = aggregationPeriod)[1];
+def prevDaysVWAP = vwap(period = aggregationPeriod)[1];
 def PS;
 switch (PivotSource) {
     case "HLC3":
@@ -39,18 +40,17 @@ def SS2;
 def SS3;
 def SS4;
 
-plot R4 = HighestAll(RR4);
-plot R3 = HighestAll(RR3);
-plot R2 = HighestAll(RR2);
-plot R1 = HighestAll(RR1);
-plot PP = HighestAll(PPP);
-plot S1 = HighestAll(SS1);
-plot S2 = HighestAll(SS2);
-plot S3 = HighestAll(SS3);
-plot S4 = HighestAll(SS4);
+plot R4 = RR4;#HighestAll(RR4);
+plot R3 = RR3;#HighestAll(RR3);
+plot R2 = RR2;#HighestAll(RR2);
+plot R1 = RR1;#HighestAll(RR1);
+plot PP = PPP;#HighestAll(PPP);
+plot S1 = SS1;#HighestAll(SS1);
+plot S2 = SS2;#HighestAll(SS2);
+plot S3 = SS3;#HighestAll(SS3);
+plot S4 = SS4;#HighestAll(SS4);
 
-#if showOnlyToday and !IsNaN(close(period = aggregationPeriod)[-1])
-if !IsNaN(close(period = aggregationPeriod)[-1])
+if showOnlyToday and !IsNaN(PC[-1])
 then {
   
     RR1 = Double.NaN;
@@ -108,7 +108,6 @@ S1.SetStyle(Curve.MEDIUM_DASH);
 S2.SetStyle(Curve.MEDIUM_DASH);
 S3.SetStyle(Curve.MEDIUM_DASH);
 S4.SetStyle(Curve.MEDIUM_DASH);
-
 
 R4.SetLineWeight(2);
 R3.SetLineWeight(2);
