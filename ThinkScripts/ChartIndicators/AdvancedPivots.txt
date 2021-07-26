@@ -1,6 +1,6 @@
 #Advanced Pivots
 #Author: TradeArcher2020
-#Version: 0.3
+#Version: 0.4
 #Date Created: 07/25/2021
 #Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script.
 
@@ -30,15 +30,26 @@ switch (PivotSource) {
         PS = (PH + PL + PC + PO + prevDaysVWAP) / 5;
 }
 
-def PPP;
-def RR1;
-def RR2;
-def RR3;
-def RR4; 
-def SS1;
-def SS2;
-def SS3;
-def SS4;
+
+def tmpPPP = PS;
+def tmpRR1 = 2 * tmpPPP - PL;
+def tmpRR2 = tmpPPP + (PH - PL);
+def tmpRR3 = tmpPPP + (PH - 2 * PL);
+def tmpRR4 = PH + 3 * (tmpPPP - PL);
+def tmpSS1 = 2 * tmpPPP - PH;
+def tmpSS2 = tmpPPP - (PH - PL);
+def tmpSS3 = 2 * tmpPPP - (2 * PH - PL);
+def tmpSS4 = PL - 3 * (PH - tmpPPP);
+
+def PPP = if(!showOnlyToday, tmpPPP, if(!IsNaN(PC[-1]), Double.NaN, tmpPPP));
+def RR1 = if(!showOnlyToday, tmpRR1, if(!IsNaN(PC[-1]), Double.NaN, tmpRR1));
+def RR2 = if(!showOnlyToday, tmpRR2, if(!IsNaN(PC[-1]), Double.NaN, tmpRR2));
+def RR3 = if(!showOnlyToday, tmpRR3, if(!IsNaN(PC[-1]), Double.NaN, tmpRR3));
+def RR4 = if(!showOnlyToday, tmpRR4, if(!IsNaN(PC[-1]), Double.NaN, tmpRR4));
+def SS1 = if(!showOnlyToday, tmpSS1, if(!IsNaN(PC[-1]), Double.NaN, tmpSS1));
+def SS2 = if(!showOnlyToday, tmpSS2, if(!IsNaN(PC[-1]), Double.NaN, tmpSS2));
+def SS3 = if(!showOnlyToday, tmpSS3, if(!IsNaN(PC[-1]), Double.NaN, tmpSS3));
+def SS4 = if(!showOnlyToday, tmpSS4, if(!IsNaN(PC[-1]), Double.NaN, tmpSS4));
 
 plot R4 = if(!showOnlyToday, RR4, HighestAll(RR4));
 plot R3 = if(!showOnlyToday, RR3, HighestAll(RR3));
@@ -50,31 +61,6 @@ plot S2 = if(!showOnlyToday, SS2, HighestAll(SS2));
 plot S3 = if(!showOnlyToday, SS3, HighestAll(SS3));
 plot S4 = if(!showOnlyToday, SS4, HighestAll(SS4));
 
-if showOnlyToday and !IsNaN(PC[-1])
-then {
-  
-    RR1 = Double.NaN;
-    RR2 = Double.NaN;
-    RR3 = Double.NaN;
-    RR4 = Double.NaN;
-    PPP = Double.NaN;
-    SS1 = Double.NaN;
-    SS2 = Double.NaN;
-    SS3 = Double.NaN;
-    SS4 = Double.NaN;
-
-} else {
-
-    PPP = PS;
-    RR1 = 2 * PPP - PL;
-    RR2 = PPP + (PH - PL);
-    RR3 = 2 * PPP + (PH - 2 * PL);
-    RR4 = PH + 3 * (PPP - PL);
-    SS1 = 2 * PPP - PH;
-    SS2 = PPP - (PH - PL);
-    SS3 = 2 * PPP - (2 * PH - PL);
-    SS4 = PL - 3 * (PH - PPP);
-}
 
 DefineGlobalColor("Resistance", Color.DARK_RED);
 DefineGlobalColor("Neutral", Color.LIGHT_GRAY);
