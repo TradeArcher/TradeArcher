@@ -1,10 +1,10 @@
 #Advanced Pivots
 #Author: TradeArcher2020
-#Version: 0.4
+#Version: 0.5
 #Date Created: 07/25/2021
 #Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script.
 
-input aggregationPeriod = AggregationPeriod.DAY;
+input aggregationPeriod = {default DAY, "2 DAYS", "3 DAYS", "4 DAYS", WEEK, MONTH, "OPT EXP", QUARTER, YEAR};
 input showOnlyToday = no;
 input PivotSource = {default "HLC3", "HLOC4", "VWAP", "Close", "Open", "HLOCVWAP5", "HLCVWAP4"};
 def PH = high(period = aggregationPeriod)[1];
@@ -12,6 +12,7 @@ def PL = low(period = aggregationPeriod)[1];
 def PC = close(period = aggregationPeriod)[1];
 def PO = open(period = aggregationPeriod)[1];
 def prevDaysVWAP = vwap(period = aggregationPeriod)[1];
+
 def PS;
 switch (PivotSource) {
     case "HLC3":
@@ -30,26 +31,25 @@ switch (PivotSource) {
         PS = (PH + PL + PC + PO + prevDaysVWAP) / 5;
 }
 
-
 def tmpPPP = PS;
 def tmpRR1 = 2 * tmpPPP - PL;
 def tmpRR2 = tmpPPP + (PH - PL);
-def tmpRR3 = tmpPPP + (PH - 2 * PL);
+def tmpRR3 = 2 * tmpPPP + (PH - 2 * PL);
 def tmpRR4 = PH + 3 * (tmpPPP - PL);
 def tmpSS1 = 2 * tmpPPP - PH;
 def tmpSS2 = tmpPPP - (PH - PL);
 def tmpSS3 = 2 * tmpPPP - (2 * PH - PL);
 def tmpSS4 = PL - 3 * (PH - tmpPPP);
 
-def PPP = if(!showOnlyToday, tmpPPP, if(!IsNaN(PC[-1]), Double.NaN, tmpPPP));
-def RR1 = if(!showOnlyToday, tmpRR1, if(!IsNaN(PC[-1]), Double.NaN, tmpRR1));
-def RR2 = if(!showOnlyToday, tmpRR2, if(!IsNaN(PC[-1]), Double.NaN, tmpRR2));
-def RR3 = if(!showOnlyToday, tmpRR3, if(!IsNaN(PC[-1]), Double.NaN, tmpRR3));
-def RR4 = if(!showOnlyToday, tmpRR4, if(!IsNaN(PC[-1]), Double.NaN, tmpRR4));
-def SS1 = if(!showOnlyToday, tmpSS1, if(!IsNaN(PC[-1]), Double.NaN, tmpSS1));
-def SS2 = if(!showOnlyToday, tmpSS2, if(!IsNaN(PC[-1]), Double.NaN, tmpSS2));
-def SS3 = if(!showOnlyToday, tmpSS3, if(!IsNaN(PC[-1]), Double.NaN, tmpSS3));
-def SS4 = if(!showOnlyToday, tmpSS4, if(!IsNaN(PC[-1]), Double.NaN, tmpSS4));
+def PPP = if(!showOnlyToday, tmpPPP, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpPPP));
+def RR1 = if(!showOnlyToday, tmpRR1, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpRR1));
+def RR2 = if(!showOnlyToday, tmpRR2, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpRR2));
+def RR3 = if(!showOnlyToday, tmpRR3, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpRR3));
+def RR4 = if(!showOnlyToday, tmpRR4, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpRR4));
+def SS1 = if(!showOnlyToday, tmpSS1, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpSS1));
+def SS2 = if(!showOnlyToday, tmpSS2, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpSS2));
+def SS3 = if(!showOnlyToday, tmpSS3, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpSS3));
+def SS4 = if(!showOnlyToday, tmpSS4, if(!IsNaN(close(period = aggregationPeriod)[-1]), Double.NaN, tmpSS4));
 
 plot R4 = if(!showOnlyToday, RR4, HighestAll(RR4));
 plot R3 = if(!showOnlyToday, RR3, HighestAll(RR3));
@@ -61,10 +61,10 @@ plot S2 = if(!showOnlyToday, SS2, HighestAll(SS2));
 plot S3 = if(!showOnlyToday, SS3, HighestAll(SS3));
 plot S4 = if(!showOnlyToday, SS4, HighestAll(SS4));
 
-
 DefineGlobalColor("Resistance", Color.DARK_RED);
 DefineGlobalColor("Neutral", Color.LIGHT_GRAY);
 DefineGlobalColor("Support", Color.DARK_GREEN);
+
 R4.SetDefaultColor(GlobalColor("Resistance"));
 R3.SetDefaultColor(GlobalColor("Resistance"));
 R2.SetDefaultColor(GlobalColor("Resistance"));
