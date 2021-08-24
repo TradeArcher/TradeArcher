@@ -1,0 +1,150 @@
+#Advanced Pivots
+#Author: TradeArcher2020
+#Version: 1.0 Beta
+#Date Created: 07/25/2021
+#Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script.
+
+input aggregationPeriod = {default DAY, "2 DAYS", "3 DAYS", "4 DAYS", WEEK, MONTH, "OPT EXP", QUARTER, YEAR};
+input showOnlyToday = no;
+input PivotSource = {default "HLC3", "HLOC4", "VWAP", "Close", "Open", "HLOCVWAP5", "HLCVWAP4"};
+input price = {default "Close", "Low", "CandleBodyLow"};
+input statsLookAhead = 5;
+input statsLookBack = 2;
+input showBuySignals = no;
+def PH = high(period = aggregationPeriod)[1];
+def PL = low(period = aggregationPeriod)[1];
+def PC = close(period = aggregationPeriod)[1];
+def PO = open(period = aggregationPeriod)[1];
+def prevDaysVWAP = vwap(period = aggregationPeriod)[1];
+
+def buyPrice; 
+switch (price) {
+case "Close":
+    buyPrice = close;
+case "Low":
+    buyPrice = low;
+case "CandleBodyLow":
+    buyPrice = if(close < open, close, open);
+}
+
+def PS;
+switch (PivotSource) {
+    case "HLC3":
+        PS = (PH + PL + PC) / 3;
+    case "HLOC4":
+        PS = (PH + PL + PC + PO) / 4;
+    case "VWAP":
+        PS = prevDaysVWAP;
+    case "Close":
+        PS = PC;
+    case "Open":
+        PS = PO;
+    case "HLCVWAP4":
+        PS = (PH + PL + PC + prevDaysVWAP) / 4;
+    case "HLOCVWAP5":
+        PS = (PH + PL + PC + PO + prevDaysVWAP) / 5;
+}
+
+def tmpPPP = PS;
+def tmpRR1 = 2 * tmpPPP - PL;
+def tmpRR2 = tmpPPP + (PH - PL);
+def tmpRR3 = 2 * tmpPPP + (PH - 2 * PL);
+def tmpRR4 = PH + 3 * (tmpPPP - PL);
+def tmpSS1 = 2 * tmpPPP - PH;
+def tmpSS2 = tmpPPP - (PH - PL);
+def tmpSS3 = 2 * tmpPPP - (2 * PH - PL);
+def tmpSS4 = PL - 3 * (PH - tmpPPP);
+
+def PPP = if(!showOnlyToday, tmpPPP, if(!IsNaN(close[-1]), Double.NaN, tmpPPP));
+def RR1 = if(!showOnlyToday, tmpRR1, if(!IsNaN(close[-1]), Double.NaN, tmpRR1));
+def RR2 = if(!showOnlyToday, tmpRR2, if(!IsNaN(close[-1]), Double.NaN, tmpRR2));
+def RR3 = if(!showOnlyToday, tmpRR3, if(!IsNaN(close[-1]), Double.NaN, tmpRR3));
+def RR4 = if(!showOnlyToday, tmpRR4, if(!IsNaN(close[-1]), Double.NaN, tmpRR4));
+def SS1 = if(!showOnlyToday, tmpSS1, if(!IsNaN(close[-1]), Double.NaN, tmpSS1));
+def SS2 = if(!showOnlyToday, tmpSS2, if(!IsNaN(close[-1]), Double.NaN, tmpSS2));
+def SS3 = if(!showOnlyToday, tmpSS3, if(!IsNaN(close[-1]), Double.NaN, tmpSS3));
+def SS4 = if(!showOnlyToday, tmpSS4, if(!IsNaN(close[-1]), Double.NaN, tmpSS4));
+
+plot R4 = if(!showOnlyToday, RR4, HighestAll(RR4));
+plot R3 = if(!showOnlyToday, RR3, HighestAll(RR3));
+plot R2 = if(!showOnlyToday, RR2, HighestAll(RR2));
+plot R1 = if(!showOnlyToday, RR1, HighestAll(RR1));
+plot PP = if(!showOnlyToday, PPP, HighestAll(PPP));
+plot S1 = if(!showOnlyToday, SS1, HighestAll(SS1));
+plot S2 = if(!showOnlyToday, SS2, HighestAll(SS2));
+plot S3 = if(!showOnlyToday, SS3, HighestAll(SS3));
+plot S4 = if(!showOnlyToday, SS4, HighestAll(SS4));
+
+DefineGlobalColor("Resistance", Color.DARK_RED);
+DefineGlobalColor("Neutral", Color.LIGHT_GRAY);
+DefineGlobalColor("Support", Color.DARK_GREEN);
+
+AddLabel(yes, “PC = ” + PC, Color.WHITE);
+AddLabel(PC > PP, if PC > PP then "BULLISH" else "", Color.GREEN);
+AddLabel(PC <= PP, if PC <= PP then "BEARISH" else "", Color.RED);
+
+#Begin Support Stats
+
+def staysAboveS1 = fold ix0 = 1 to statsLookAhead with b0 = no do if(b0 or GetValue(buyPrice, -ix0) < GetValue(S1, -ix0), yes, no);
+def s1Support = if(buyPrice < PP and buyPrice > S1 and if(IsNaN(staysAboveS1), no, staysAboveS1) and (buyPrice[-statsLookAhead] > PP and !(buyPrice[-statsLookAhead] < S1)) within statsLookAhead bars, 1, 0);
+def s1SupportCount = TotalSum(s1Support);
+AddLabel(yes, " S1 Support Count: " + s1SupportCount, GlobalColor("Support"));
+
+
+def staysAboveS2 = fold ix1 = 1 to statsLookAhead with b1 = no do if(b1 or GetValue(buyPrice, -ix1) < GetValue(S1, -ix1), yes, no);
+def s2Support = if(buyPrice < S1 and buyPrice > S2 and if(IsNaN(staysAboveS2), no, staysAboveS2) and (buyPrice[-statsLookAhead] > S1 and !(buyPrice[-statsLookAhead] < S2)) within statsLookAhead bars, 1, 0);
+def s2SupportCount = TotalSum(s2Support);
+AddLabel(yes, " S2 Support Count: " + s2SupportCount, GlobalColor("Support"));
+
+
+def staysAboveS3 = fold ix2 = 1 to statsLookAhead with b2 = no do if(b2 or GetValue(buyPrice, -ix2) < GetValue(S2, -ix2), yes, no);
+def s3Support = if(buyPrice < S2 and buyPrice > S3 and if(IsNaN(staysAboveS3), no, staysAboveS3) and (buyPrice[-statsLookAhead] > S2 and !(buyPrice[-statsLookAhead] < S3)) within statsLookAhead bars, 1, 0);
+def s3SupportCount = TotalSum(s3Support);
+AddLabel(yes, " S3 Support Count: " + s2SupportCount, GlobalColor("Support"));
+
+
+def staysAboveS4 = fold ix3 = 1 to statsLookAhead with b3 = no do if(b3 or GetValue(buyPrice, -ix3) < GetValue(S3, -ix3), yes, no);
+def s4Support = if(buyPrice < S3 and buyPrice > S4 and if(IsNaN(staysAboveS4), no, staysAboveS4) and (buyPrice[-statsLookAhead] > S3 and !(buyPrice[-statsLookAhead] < S4)) within statsLookAhead bars, 1, 0);
+def s4SupportCount = TotalSum(s4Support);
+AddLabel(yes, " S4 Support Count: " + s4SupportCount, GlobalColor("Support"));
+
+
+R4.SetDefaultColor(GlobalColor("Resistance"));
+R3.SetDefaultColor(GlobalColor("Resistance"));
+R2.SetDefaultColor(GlobalColor("Resistance"));
+R1.SetDefaultColor(GlobalColor("Resistance"));
+PP.SetDefaultColor(GlobalColor("Neutral"));
+S1.SetDefaultColor(GlobalColor("Support"));
+S2.SetDefaultColor(GlobalColor("Support"));
+S3.SetDefaultColor(GlobalColor("Support"));
+S4.SetDefaultColor(GlobalColor("Support"));
+
+R4.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R3.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R2.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R1.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+PP.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S1.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S2.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S3.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S4.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+R4.SetStyle(Curve.MEDIUM_DASH);
+R3.SetStyle(Curve.MEDIUM_DASH);
+R2.SetStyle(Curve.MEDIUM_DASH);
+R1.SetStyle(Curve.MEDIUM_DASH);
+PP.SetStyle(Curve.MEDIUM_DASH);
+S1.SetStyle(Curve.MEDIUM_DASH);
+S2.SetStyle(Curve.MEDIUM_DASH);
+S3.SetStyle(Curve.MEDIUM_DASH);
+S4.SetStyle(Curve.MEDIUM_DASH);
+
+R4.SetLineWeight(2);
+R3.SetLineWeight(2);
+R2.SetLineWeight(2);
+R1.SetLineWeight(2);
+PP.SetLineWeight(2);
+S1.SetLineWeight(2);
+S2.SetLineWeight(2);
+S3.SetLineWeight(2);
+S4.SetLineWeight(2);
