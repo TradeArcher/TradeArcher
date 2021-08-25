@@ -1,0 +1,384 @@
+#Advanced Pivots with Stats
+#Author: TradeArcher2020
+#Version: 1.0
+#Date Created: 08/25/2021
+#Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script. It keeps a count of each time a pivot line is respected as support and calculate the percentage based on the number of days available on the current chart. Works best if you have several months of data.
+
+input period = {default DAY, "2 DAYS", "3 DAYS", "4 DAYS", WEEK, MONTH, "OPT EXP", QUARTER, YEAR};
+input mode = {default TodayOnly, TodayOnlyWithStats, ShowAllPivots};
+input PivotSource = {default "HLC3", "HLOC4", "VWAP", "Close", "Open", "HLOCVWAP5", "HLCVWAP4"};
+input ShowSignals = no;
+input SignalThreshold = {default WholeRange, BottomHalf, BottomThird, BottomQuarter, PercentAbovePivot};
+input SignalPercentAbove = 2;
+
+def showOnlyToday;
+def hidePreviousPivots;
+switch (mode) {
+    case TodayOnly:
+        showOnlyToday = yes;
+        hidePreviousPivots = no;
+    case TodayOnlyWithStats:
+        showOnlyToday = no;
+        hidePreviousPivots = yes;
+    case ShowAllPivots:
+        showOnlyToday = no;
+        hidePreviousPivots = no;
+}
+
+def currentAggPrd = GetAggregationPeriod();
+
+def aggPrd;
+switch (period) {
+case DAY:
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.DAY);
+case "2 DAYS":
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.TWO_DAYS);
+case "3 DAYS":
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.THREE_DAYS);
+case "4 DAYS":
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.FOUR_DAYS);
+case WEEK:
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.WEEK);
+case MONTH:
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.MONTH);
+case "OPT EXP":
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.OPT_EXP);
+case QUARTER:
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.QUARTER);
+case YEAR:
+    aggPrd = If (currentAggPrd > aggregationPeriod.DAY, currentAggPrd, aggregationPeriod.YEAR);
+}
+
+def ap;
+switch (period) {
+case DAY:
+    ap = aggregationPeriod.DAY;
+case "2 DAYS":
+    ap = aggregationPeriod.TWO_DAYS;
+case "3 DAYS":
+    ap = aggregationPeriod.THREE_DAYS;
+case "4 DAYS":
+    ap = aggregationPeriod.FOUR_DAYS;
+case WEEK:
+    ap = aggregationPeriod.WEEK;
+case MONTH:
+    ap = aggregationPeriod.MONTH;
+case "OPT EXP":
+    ap = aggregationPeriod.OPT_EXP;
+case QUARTER:
+    ap = aggregationPeriod.QUARTER;
+case YEAR:
+    ap = aggregationPeriod.YEAR;
+}
+#AddLabel(yes, "Current Agg Prd: " + currentAggPrd, Color.WHITE);
+#AddLabel(yes, "Selected Agg Prd: " + ap, Color.WHITE);
+#AddLabel(yes, "Calculated Agg Prd: " + aggPrd, Color.WHITE);
+
+def PH = high(period = aggPrd)[1];
+def PL = low(period = aggPrd)[1];
+def PC = close(period = aggPrd)[1];
+def PO = open(period = aggPrd)[1];
+def prevDaysVWAP = vwap(period = aggPrd)[1];
+def isGapUp = close(period = aggPrd)[1] < close(period = aggPrd);
+
+def todaysLow = low(period = aggPrd);
+
+def PS;
+switch (PivotSource) {
+case "HLC3":
+    PS = (PH + PL + PC) / 3;
+case "HLOC4":
+    PS = (PH + PL + PC + PO) / 4;
+case "VWAP":
+    PS = prevDaysVWAP;
+case "Close":
+    PS = PC;
+case "Open":
+    PS = PO;
+case "HLCVWAP4":
+    PS = (PH + PL + PC + prevDaysVWAP) / 4;
+case "HLOCVWAP5":
+    PS = (PH + PL + PC + PO + prevDaysVWAP) / 5;
+}
+
+def tmpPPP = PS;
+def tmpRR1 = 2 * tmpPPP - PL;
+def tmpRR2 = tmpPPP + (PH - PL);
+def tmpRR3 = 2 * tmpPPP + (PH - 2 * PL);
+def tmpRR4 = PH + 3 * (tmpPPP - PL);
+def tmpSS1 = 2 * tmpPPP - PH;
+def tmpSS2 = tmpPPP - (PH - PL);
+def tmpSS3 = 2 * tmpPPP - (2 * PH - PL);
+def tmpSS4 = PL - 3 * (PH - tmpPPP);
+
+def PPP = If(!showOnlyToday, tmpPPP, If(!IsNaN(close[-1]), Double.NaN, tmpPPP));
+def RR1 = If(!showOnlyToday, tmpRR1, If(!IsNaN(close[-1]), Double.NaN, tmpRR1));
+def RR2 = If(!showOnlyToday, tmpRR2, If(!IsNaN(close[-1]), Double.NaN, tmpRR2));
+def RR3 = If(!showOnlyToday, tmpRR3, If(!IsNaN(close[-1]), Double.NaN, tmpRR3));
+def RR4 = If(!showOnlyToday, tmpRR4, If(!IsNaN(close[-1]), Double.NaN, tmpRR4));
+def SS1 = If(!showOnlyToday, tmpSS1, If(!IsNaN(close[-1]), Double.NaN, tmpSS1));
+def SS2 = If(!showOnlyToday, tmpSS2, If(!IsNaN(close[-1]), Double.NaN, tmpSS2));
+def SS3 = If(!showOnlyToday, tmpSS3, If(!IsNaN(close[-1]), Double.NaN, tmpSS3));
+def SS4 = If(!showOnlyToday, tmpSS4, If(!IsNaN(close[-1]), Double.NaN, tmpSS4));
+
+def PPPStats = tmpPPP;
+def RR1Stats = tmpRR1;
+def RR2Stats = tmpRR2;
+def RR3Stats = tmpRR3;
+def RR4Stats = tmpRR4;
+def SS1Stats = tmpSS1;
+def SS2Stats = tmpSS2;
+def SS3Stats = tmpSS3;
+def SS4Stats = tmpSS4;
+
+plot R4 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, RR4), HighestAll(RR4));
+plot R3 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, RR3), HighestAll(RR3));
+plot R2 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, RR2), HighestAll(RR2));
+plot R1 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, RR1), HighestAll(RR1));
+plot PP = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, PPP), HighestAll(PPP));
+plot S1 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, SS1), HighestAll(SS1));
+plot S2 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, SS2), HighestAll(SS2));
+plot S3 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, SS3), HighestAll(SS3));
+plot S4 = If(!showOnlyToday, if(hidePreviousPivots and !IsNaN(close[-1]), Double.NaN, SS4), HighestAll(SS4));
+
+AddLabel(yes, “Previous Close: ” + PC, Color.WHITE);
+AddLabel(PC > PP, if PC > PP then "BULLISH" else "", Color.GREEN);
+AddLabel(PC <= PP, if PC <= PP then "BEARISH" else "", Color.RED);
+
+DefineGlobalColor("PP", Color.WHITE);
+DefineGlobalColor("S1", CreateColor(153, 255, 153));
+DefineGlobalColor("S2", CreateColor(51, 255, 51));
+DefineGlobalColor("S3", CreateColor(0, 204, 0));
+DefineGlobalColor("S4", CreateColor(0, 102, 0));
+DefineGlobalColor("R1", CreateColor(255, 153, 153));
+DefineGlobalColor("R2", CreateColor(255, 51, 51));
+DefineGlobalColor("R3", CreateColor(204, 0, 0));
+DefineGlobalColor("R4", CreateColor(102, 0, 0));
+
+#Begin Support Stats
+
+def r4SupportCount = If(todaysLow >= RR4Stats, r4SupportCount[1] + 1, If(IsNaN(r4SupportCount[1]), 0, r4SupportCount[1]));
+def r3SupportCount = If(todaysLow >= RR3Stats and todaysLow < RR4Stats, r3SupportCount[1] + 1, If(IsNaN(r4SupportCount[1]), 0, r3SupportCount[1]));
+def r2SupportCount = If(todaysLow >= RR2Stats and todaysLow < RR3Stats, r2SupportCount[1] + 1, If(IsNaN(r2SupportCount[1]), 0, r2SupportCount[1]));
+def r1SupportCount = If(todaysLow >= RR1Stats and todaysLow < RR2Stats, r1SupportCount[1] + 1, If(IsNaN(r1SupportCount[1]), 0, r1SupportCount[1]));
+def ppSupportCount = If(todaysLow >= PPPStats and todaysLow < RR1Stats, ppSupportCount[1] + 1, If(IsNaN(ppSupportCount[1]), 0, ppSupportCount[1]));
+def s1SupportCount = If(todaysLow >= SS1Stats and todaysLow < PPPStats, s1SupportCount[1] + 1, If(IsNaN(s1SupportCount[1]), 0, s1SupportCount[1]));
+def s2SupportCount = If(todaysLow >= SS2Stats and todaysLow < SS1Stats, s2SupportCount[1] + 1, If(IsNaN(s2SupportCount[1]), 0, s2SupportCount[1]));
+def s3SupportCount = If(todaysLow >= SS3Stats and todaysLow < SS2Stats, s3SupportCount[1] + 1, If(IsNaN(s3SupportCount[1]), 0, s3SupportCount[1]));
+def s4SupportCount = If(todaysLow >= SS4Stats and todaysLow < SS3Stats, s4SupportCount[1] + 1, If(IsNaN(s4SupportCount[1]), 0, s4SupportCount[1]));
+
+def keySupport;
+def keySupportLower;
+def keySupportUpper;
+if s4SupportCount > r4SupportCount 
+and s4SupportCount > r3SupportCount 
+and s4SupportCount > r2SupportCount 
+and s4SupportCount > r1SupportCount 
+and s4SupportCount > ppSupportCount 
+and s4SupportCount > s1SupportCount 
+and s4SupportCount > s2SupportCount 
+and s4SupportCount > s3SupportCount
+then {
+    keySupport = S4;
+    keySupportLower = S4;
+    keySupportUpper = S3;
+}
+else if s3SupportCount > r4SupportCount 
+and s3SupportCount > r3SupportCount 
+and s3SupportCount > r2SupportCount 
+and s3SupportCount > r1SupportCount 
+and s3SupportCount > ppSupportCount 
+and s3SupportCount > s1SupportCount 
+and s3SupportCount > s2SupportCount 
+and s3SupportCount > s4SupportCount
+then {
+    keySupport = S3;
+    keySupportLower = S3;
+    keySupportUpper = S2;
+}
+else if s2SupportCount > r4SupportCount 
+and s2SupportCount > r3SupportCount 
+and s2SupportCount > r2SupportCount 
+and s2SupportCount > r1SupportCount 
+and s2SupportCount > ppSupportCount 
+and s2SupportCount > s1SupportCount 
+and s2SupportCount > s3SupportCount 
+and s2SupportCount > s4SupportCount
+then {
+    keySupport = S2;
+    keySupportLower = S2;
+    keySupportUpper = S1;
+}
+else if s1SupportCount > r4SupportCount 
+and s1SupportCount > r3SupportCount 
+and s1SupportCount > r2SupportCount 
+and s1SupportCount > r1SupportCount 
+and s1SupportCount > ppSupportCount 
+and s1SupportCount > s2SupportCount 
+and s1SupportCount > s3SupportCount 
+and s1SupportCount > s4SupportCount
+then {
+    keySupport = S1;
+    keySupportLower = S1;
+    keySupportUpper = PP;
+}
+else if ppSupportCount > r4SupportCount 
+and ppSupportCount > r3SupportCount 
+and ppSupportCount > r2SupportCount 
+and ppSupportCount > r1SupportCount 
+and ppSupportCount > s1SupportCount 
+and ppSupportCount > s2SupportCount 
+and ppSupportCount > s3SupportCount 
+and ppSupportCount > s4SupportCount
+then {
+    keySupport = PP;
+    keySupportLower = PP;
+    keySupportUpper = R1;
+}
+else if r1SupportCount > r4SupportCount 
+and r1SupportCount > r3SupportCount 
+and r1SupportCount > r2SupportCount 
+and r1SupportCount > ppSupportCount 
+and r1SupportCount > s1SupportCount 
+and r1SupportCount > s2SupportCount 
+and r1SupportCount > s3SupportCount 
+and r1SupportCount > s4SupportCount
+then {
+    keySupport = R1;
+    keySupportLower = R1;
+    keySupportUpper = R2;
+}
+else if r2SupportCount > r4SupportCount 
+and r2SupportCount > r3SupportCount 
+and r2SupportCount > r1SupportCount 
+and r2SupportCount > ppSupportCount 
+and r2SupportCount > s1SupportCount 
+and r2SupportCount > s2SupportCount 
+and r2SupportCount > s3SupportCount 
+and r2SupportCount > s4SupportCount
+then {
+    keySupport = R2;
+    keySupportLower = R2;
+    keySupportUpper = R3;
+}
+else if r3SupportCount > r4SupportCount 
+and r3SupportCount > r2SupportCount 
+and r3SupportCount > r1SupportCount 
+and r3SupportCount > ppSupportCount 
+and r3SupportCount > s1SupportCount 
+and r3SupportCount > s2SupportCount 
+and r3SupportCount > s3SupportCount 
+and r3SupportCount > s4SupportCount
+then {
+    keySupport = R3;
+    keySupportLower = R3;
+    keySupportUpper = R4;
+}
+else {
+    keySupport = R4;
+    keySupportLower = Double.NaN;
+    keySupportUpper = Double.NaN;
+}
+
+def topThreshold;
+switch (SignalThreshold) {
+    case PercentAbovePivot:
+        topThreshold = if(keySupportLower + (keySupportLower * (SignalPercentAbove/100)) < keySupportUpper, keySupportLower + (keySupportLower * (SignalPercentAbove/100)), keySupportUpper);
+    case BottomQuarter:
+        topThreshold = keySupportLower + (keySupportUpper - keySupportLower) / 4;
+    case BottomThird:
+        topThreshold = keySupportLower + (keySupportUpper - keySupportLower) / 3;
+    case BottomHalf:
+        topThreshold = keySupportLower + (keySupportUpper - keySupportLower) / 2;
+    case WholeRange:
+        topThreshold = keySupportUpper;
+}
+
+plot BuySignal = ShowSignals and close < topThreshold and close >= keySupportLower;
+BuySignal.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_UP);
+BuySignal.AssignValueColor(if keySupport == S4 then
+GlobalColor("S4")
+else if keySupport == S3 then
+GlobalColor("S3")
+else if keySupport == S2 then
+GlobalColor("S2")
+else if keySupport == S1 then
+GlobalColor("S1")
+else if keySupport == PP then
+GlobalColor("PP")
+else if keySupport == R1 then
+GlobalColor("R1")
+else if keySupport == R2 then
+GlobalColor("R2")
+else if keySupport == R3 then
+GlobalColor("R3")
+else GlobalColor("R4"));
+
+AddLabel(!showOnlyToday, "Pivot Support Totals...", GlobalColor("PP"));
+AddLabel(!showOnlyToday, "R4: " + Round((r4SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("R4"));
+AddLabel(!showOnlyToday, "R3: " + Round((r3SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("R3"));
+AddLabel(!showOnlyToday, "R2: " + Round((r2SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("R2"));
+AddLabel(!showOnlyToday, "R1: " + Round((r1SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("R1"));
+AddLabel(!showOnlyToday, "PP: " + Round((ppSupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("PP"));
+AddLabel(!showOnlyToday, "S1: " + Round((s1SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("S1"));
+AddLabel(!showOnlyToday, "S2: " + Round((s2SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("S2"));
+AddLabel(!showOnlyToday, "S3: " + Round((s3SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("S3"));
+AddLabel(!showOnlyToday, "S4: " + Round((s4SupportCount / BarNumber()) * 100, 0) + "%", GlobalColor("S4"));
+AddLabel(!showOnlyToday, "Key Pivot Support: " + 
+if keySupport == S4 then
+"S4"
+else if keySupport == S3 then
+"S3"
+else if keySupport == S2 then
+"S2"
+else if keySupport == S1 then
+"S1"
+else if keySupport == PP then
+"PP"
+else if keySupport == R1 then
+"R1"
+else if keySupport == R2 then
+"R2"
+else if keySupport == R3 then
+"R3"
+else "R4", GlobalColor("PP"));
+
+R4.SetDefaultColor(GlobalColor("R4"));
+R3.SetDefaultColor(GlobalColor("R3"));
+R2.SetDefaultColor(GlobalColor("R2"));
+R1.SetDefaultColor(GlobalColor("R1"));
+PP.SetDefaultColor(GlobalColor("PP"));
+S1.SetDefaultColor(GlobalColor("S1"));
+S2.SetDefaultColor(GlobalColor("S2"));
+S3.SetDefaultColor(GlobalColor("S3"));
+S4.SetDefaultColor(GlobalColor("S4"));
+
+R4.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R3.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R2.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+R1.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+PP.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S1.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S2.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S3.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+S4.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+R4.SetLineWeight(2);
+R3.SetLineWeight(2);
+R2.SetLineWeight(2);
+R1.SetLineWeight(2);
+PP.SetLineWeight(2);
+S1.SetLineWeight(2);
+S2.SetLineWeight(2);
+S3.SetLineWeight(2);
+S4.SetLineWeight(2);
+
+R4.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+R3.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+R2.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+R1.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+PP.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+S1.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+S2.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+S3.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
+S4.SetHiding(hidePreviousPivots and !IsNaN(close[-1]));
