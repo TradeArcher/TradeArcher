@@ -6,7 +6,13 @@
 
 input aggregationPeriod = {default DAY, "2 DAYS", "3 DAYS", "4 DAYS", WEEK, MONTH, "OPT EXP", QUARTER, YEAR};
 input showOnlyToday = no;
+input intradayOnly = no;
 input PivotSource = {default "HLC3", "HLOC4", "VWAP", "Close", "Open", "HLOCVWAP5", "HLCVWAP4"};
+
+def currentAggPrd = GetAggregationPeriod();
+def isIntraDay = currentAggPrd < AggregationPeriod.DAY;
+def hidePlot = intradayOnly and !isIntraDay;
+
 def PH = high(period = aggregationPeriod)[1];
 def PL = low(period = aggregationPeriod)[1];
 def PC = close(period = aggregationPeriod)[1];
@@ -104,3 +110,13 @@ S1.SetLineWeight(2);
 S2.SetLineWeight(2);
 S3.SetLineWeight(2);
 S4.SetLineWeight(2);
+
+R4.SetHiding(hidePlot);
+R3.SetHiding(hidePlot);
+R2.SetHiding(hidePlot);
+R1.SetHiding(hidePlot);
+PP.SetHiding(hidePlot);
+S1.SetHiding(hidePlot);
+S2.SetHiding(hidePlot);
+S3.SetHiding(hidePlot);
+S4.SetHiding(hidePlot);
