@@ -1,0 +1,63 @@
+#VWAP High Volume Anchor Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 08/26/2021
+
+#This indicator will recalculate the VWAP starting from every point where the volume exceeds the highVolPct percent for more than the minHighVolBars.
+
+
+input numDev1 = 1.0;
+input numDev2 = 2.0;
+input timeFrame = {default DAY, WEEK, MONTH};
+input volMAType = AverageType.SIMPLE;
+input volMALength = 50;
+input highVolPct = 100;
+input minHighVolBars = 1;
+
+def ma = MovingAverage(data = volume, length = volMALength, averageType = volMAType);
+def consecutiveHighVolBars = if(volume >= ma + (ma * highVolPct/100), consecutiveHighVolBars[1] + 1, 0);
+def startOverVwap = consecutiveHighVolBars >= minHighVolBars;
+
+def isPeriodRolled = compoundValue(1, startOverVwap != startOverVwap[1], yes);
+
+def volumeSum;
+def volumeVwapSum;
+def volumeVwap2Sum;
+
+if (isPeriodRolled) {
+    volumeSum = volume;
+    volumeVwapSum = volume * vwap;
+    volumeVwap2Sum = volume * Sqr(vwap);
+} else {
+    volumeSum = compoundValue(1, volumeSum[1] + volume, volume);
+    volumeVwapSum = compoundValue(1, volumeVwapSum[1] + volume * vwap, volume * vwap);
+    volumeVwap2Sum = compoundValue(1, volumeVwap2Sum[1] + volume * Sqr(vwap), volume * Sqr(vwap));
+}
+def price = volumeVwapSum / volumeSum;
+def deviation = Sqrt(Max(volumeVwap2Sum / volumeSum - Sqr(price), 0));
+
+plot highVolumeBar = if(startOverVwap, VWap, Double.NaN);
+highVolumeBar.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+highVolumeBar.setDefaultColor(Color.LIGHT_ORANGE);
+highVolumeBar.SetLineWeight(3);
+
+plot VWAP = price;
+plot UpperBand = price + numDev1 * deviation;
+plot LowerBand = price - numDev1 * deviation;
+
+plot UpperBand2 = price + numDev2 * deviation;
+plot LowerBand2 = price - numDev2 * deviation;
+
+VWAP.setDefaultColor(Color.LIGHT_ORANGE);
+
+UpperBand.setStyle(Curve.SHORT_DASH);
+LowerBand.setStyle(Curve.SHORT_DASH);
+
+UpperBand2.setStyle(Curve.LONG_DASH);
+LowerBand2.setStyle(Curve.LONG_DASH);
+
+UpperBand.setDefaultColor(Color.LIGHT_ORANGE);
+LowerBand.setDefaultColor(Color.LIGHT_ORANGE);
+
+UpperBand2.setDefaultColor(Color.LIGHT_ORANGE);
+LowerBand2.setDefaultColor(Color.LIGHT_ORANGE);
