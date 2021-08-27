@@ -1,9 +1,9 @@
 #VWAP High Volume Anchor Chart Indicator
 #Author: TradeArcher2020
 #Version: 0.1
-#Date Created: 11/22/2020
+#Date Created: 08/26/2021
 
-#This indicator will recalculate the VWAP starting from every point where the volume exceeds the hotPct percent for more than the highVolumeMinPeriods.
+#This indicator will recalculate the VWAP starting from every point where the volume exceeds the highVolPct percent for more than the minHighVolBars.
 
 
 input numDev1 = 1.0;
