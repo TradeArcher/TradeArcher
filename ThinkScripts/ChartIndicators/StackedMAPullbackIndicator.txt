@@ -1,0 +1,241 @@
+#Stacked MA Pullback Indicator
+#Author: TradeArcher2020
+#Version: 0.5
+#Date Created: 01/17/2021
+
+input includePremarket = yes;
+
+def isWithinTradingHours = If (includePreMarket, yes, RegularTradingStart(GetYYYYMMDD()) < GetTime() and  RegularTradingEnd(GetYYYYMMDD()) > GetTime());
+
+#Begin Strategy Specific Inputs
+input maType = AverageType.EXPONENTIAL;
+input maPeriod1 = 8;
+input maPeriod2 = 21;
+input maPeriod3 = 34;
+input maPeriod4 = 55;
+input maPeriod5 = 89;
+input maPeriod6 = 144;
+input hullMAPeriod = 5;
+
+input price = {default "Close", "Low", "CandleBodyLow"};
+input statsLookAhead = 5;
+input statsLookBack = 2;
+
+input recentHighPeriod = 5;
+input showBubbles = yes;
+input minBubbleExpansion = 3;
+input showBuySignals = no;
+input showBuyCrossUpSignal = no;
+input hideIrrelevantLines = no;
+input enableAlerts = no;
+
+def buyPrice; 
+switch (price) {
+case "Close":
+    buyPrice = close;
+case "Low":
+    buyPrice = low;
+case "CandleBodyLow":
+    buyPrice = if(close < open, close, open);
+}
+
+def sellPrice = close;
+def bn = BarNumber();
+def currentBar = HighestAll(if !IsNaN(close) then bn else Double.NaN);
+
+#End Strategy Specific Inputs
+
+#***********************************************************************
+#Begin Strategy specific code
+
+DefineGlobalColor("ShortMA", Color.CYAN);
+DefineGlobalColor("MedianMA", Color.WHITE);
+DefineGlobalColor("SupportMA", Color.LIME);
+DefineGlobalColor("StopLossMA", Color.DARK_RED);
+DefineGlobalColor("BuySignal", Color.LIME);
+DefineGlobalColor("BuyCrossUpSignal", Color.LIGHT_GREEN);
+DefineGlobalColor("SellSignal", Color.LIME);
+
+DefineGlobalColor("MA1", Color.CYAN);
+DefineGlobalColor("MA2", Color.WHITE);
+DefineGlobalColor("MA3", Color.LIME);
+DefineGlobalColor("MA4", Color.MAGENTA);
+DefineGlobalColor("MA5", Color.PLUM);
+DefineGlobalColor("MA6", Color.VIOLET);
+
+DefineGlobalColor("HullUp", Color.UPTICK);
+DefineGlobalColor("HullDown", Color.DOWNTICK);
+DefineGlobalColor("HullNeutral", Color.LIGHT_GRAY);
+
+def ma1 = MovingAverage(averageType = maType, data = CLOSE, length = maPeriod1);
+def ma1Level = if(IsNaN(close[-1]), if(!IsNaN(ma1Level[1]) and !IsNaN(close[minBubbleExpansion+0]), ma1Level[1], ma1), Double.NaN);
+
+def ma2 = MovingAverage(averageType = maType, data = CLOSE, length = maPeriod2);
+def ma2Level = if(IsNaN(close[-1]), if(!IsNaN(ma2Level[1]) and !IsNaN(close[minBubbleExpansion+7]), ma2Level[1], ma2), Double.NaN);
+
+def ma3 = MovingAverage(averageType = maType, data = CLOSE, length = maPeriod3);
+def ma3Level = if(IsNaN(close[-1]), if(!IsNaN(ma3Level[1]) and !IsNaN(close[minBubbleExpansion+14]), ma3Level[1], ma3), Double.NaN);
+
+def ma4 = MovingAverage(averageType = maType, data = CLOSE, length = maPeriod4);
+def ma4Level = if(IsNaN(close[-1]), if(!IsNaN(ma4Level[1]) and !IsNaN(close[minBubbleExpansion+21]), ma4Level[1], ma4), Double.NaN);
+
+def ma5 = MovingAverage(averageType = maType, data = CLOSE, length = maPeriod5);
+def ma5Level = if(IsNaN(close[-1]), if(!IsNaN(ma5Level[1]) and !IsNaN(close[minBubbleExpansion+28]), ma5Level[1], ma5), Double.NaN);
+
+def ma6 = MovingAverage(averageType = maType, data = CLOSE, length = maPeriod6);
+def ma6Level = if(IsNaN(close[-1]), if(!IsNaN(ma6Level[1]) and !IsNaN(close[minBubbleExpansion+36]), ma6Level[1], ma6), Double.NaN);
+
+plot hullMA = HullMovingAvg(length = hullMAPeriod);
+def hullMADirection = if hullMA[1] < hullMA then 1 else if hullMA[1] > hullMA then -1 else 0;
+hullMA.SetStyle(Curve.MEDIUM_DASH);
+hullMA.AssignValueColor(if hullMADirection > 0 then GlobalColor("HullUp") else if hullMADirection < 0 then GlobalColor("HullDown") else GlobalColor("HullNeutral"));
+
+def areMAsStacked = ma1 >= ma2 and ma2 >= ma3 and ma3 >= ma4 and ma4 >= ma5 and ma5 >= ma6;
+
+#Begin Stats
+def staysAboveEma2 = fold ix1 = 1 to statsLookAhead with b1 = no do if(b1 or GetValue(buyPrice, -ix1) < GetValue(ma1, -ix1), yes, no);
+def ma1Support = if(areMAsStacked and buyPrice < ma1 and buyPrice > ma2 and if(IsNaN(staysAboveEma2), no, staysAboveEma2) and (buyPrice[-statsLookAhead] > ma1 and !(buyPrice[-statsLookAhead] < ma2)) within statsLookAhead bars, 1, 0);
+def ma1SupportCount = TotalSum(ma1Support);
+AddLabel(yes, maPeriod2 + " MA Support Count: " + ma1SupportCount, GlobalColor("MA2"));
+
+
+def staysAboveEma3 = fold ix2 = 1 to statsLookAhead with b2 = no do if(b2 or GetValue(buyPrice, -ix2) < GetValue(ma2, -ix2), yes, no);
+def ma2Support = if(areMAsStacked and buyPrice < ma2 and buyPrice > ma3 and if(IsNaN(staysAboveEma3), no, staysAboveEma3) and (buyPrice[-statsLookAhead] > ma2 and !(buyPrice[-statsLookAhead] < ma3)) within statsLookAhead bars, 1, 0);
+def ma2SupportCount = TotalSum(ma2Support);
+AddLabel(yes, maPeriod3 + " MA Support Count: " + ma2SupportCount, GlobalColor("MA3"));
+
+
+def staysAboveEma4 = fold ix3 = 1 to statsLookAhead with b3 = no do if(b3 or GetValue(buyPrice, -ix3) < GetValue(ma3, -ix3), yes, no);
+def ma3Support = if(areMAsStacked and buyPrice < ma3 and buyPrice > ma4 and if(IsNaN(staysAboveEma4), no, staysAboveEma4) and (buyPrice[-statsLookAhead] > ma3 and !(buyPrice[-statsLookAhead] < ma4)) within statsLookAhead bars, 1, 0);
+def ma3SupportCount = TotalSum(ma3Support);
+AddLabel(yes, maPeriod4 + " MA Support Count: " + ma3SupportCount, GlobalColor("MA4"));
+
+
+def staysAboveEma5 = fold ix4 = 1 to statsLookAhead with b4 = no do if(b4 or GetValue(buyPrice, -ix4) < GetValue(ma4, -ix4), yes, no);
+def ma4Support = if(areMAsStacked and buyPrice < ma4 and buyPrice > ma5 and if(IsNaN(staysAboveEma5), no, staysAboveEma5) and (buyPrice[-statsLookAhead] > ma4 and !(buyPrice[-statsLookAhead] < ma5)) within statsLookAhead bars, 1, 0);
+def ma4SupportCount = TotalSum(ma4Support);
+AddLabel(yes, maPeriod5 + " MA Support Count: " + ma4SupportCount, GlobalColor("MA5"));
+
+
+def staysAboveEma6 = fold ix5 = 1 to statsLookAhead with b5 = no do if(b5 or GetValue(buyPrice, -ix5) < GetValue(ma5, -ix5), yes, no);
+def ma5Support = if(areMAsStacked and buyPrice < ma5 and buyPrice > ma5 and if(IsNaN(staysAboveEma6), no, staysAboveEma6) and (buyPrice[-statsLookAhead] > ma5 and !(buyPrice[-statsLookAhead] < ma6)) within statsLookAhead bars, 1, 0);
+def ma5SupportCount = TotalSum(ma5Support);
+AddLabel(yes, maPeriod6 + " MA Support Count: " + ma5SupportCount, GlobalColor("MA6"));
+
+def keySupportMA;
+def keySupportMALower;
+def keySupportMAUpper;
+if (ma1supportCount >= ma2SupportCount and ma1supportCount >= ma3SupportCount and ma1supportCount >= ma4SupportCount and ma1supportCount >= ma5SupportCount) then {
+keySupportMA = maPeriod2;
+keySupportMALower = if(areMAsStacked, ma2, Double.NaN);
+keySupportMAUpper = if(areMAsStacked, ma1, Double.NaN);
+} 
+else if (ma2supportCount >= ma1SupportCount and ma2supportCount >= ma3SupportCount and ma2supportCount >= ma4SupportCount and ma2supportCount >= ma5SupportCount) then {
+keySupportMA = maPeriod3;
+keySupportMALower = if(areMAsStacked, ma3, Double.NaN);
+keySupportMAUpper = if(areMAsStacked, ma2, Double.NaN);
+}
+else if (ma3supportCount >= ma1SupportCount and ma3supportCount >= ma2SupportCount and ma3supportCount >= ma4SupportCount and ma3supportCount >= ma5SupportCount) then {
+keySupportMA = maPeriod4;
+keySupportMALower = if(areMAsStacked, ma4, Double.NaN);
+keySupportMAUpper = if(areMAsStacked, ma3, Double.NaN);
+}
+else if (ma4supportCount >= ma1SupportCount and ma4supportCount >= ma2SupportCount and ma4supportCount >= ma3SupportCount and ma4supportCount >= ma5SupportCount) then {
+keySupportMA = maPeriod5;
+keySupportMALower = if(areMAsStacked, ma5, Double.NaN);
+keySupportMAUpper = if(areMAsStacked, ma4, Double.NaN);
+}
+else {
+keySupportMA = maPeriod1;
+keySupportMALower = if(areMAsStacked, ma6, Double.NaN);
+#keySupportMAUpper = if(areMAsStacked, ma5, Double.NaN);
+keySupportMAUpper = if(areMAsStacked, if(close < open, close, open), Double.NaN);
+}
+
+AddLabel(yes, "Key Support: " + keySupportMA + " MA", if keySupportMA == maPeriod2 then GlobalColor("MA2") else if keySupportMA == maPeriod3 then GlobalColor("MA3") else if keySupportMA == maPeriod4 then GlobalColor("MA4") else if keySupportMA == maPeriod5 then GlobalColor("MA5") else GlobalColor("MA6"));
+
+
+AddCloud(if(keySupportMA == maPeriod1, keySupportMAUpper, Double.NaN), if(keySupportMA == maPeriod1, keySupportMALower, Double.NaN), GlobalColor("MA1"));
+AddCloud(if(keySupportMA == maPeriod2, keySupportMAUpper, Double.NaN), if(keySupportMA == maPeriod2, keySupportMALower, Double.NaN), GlobalColor("MA2"));
+AddCloud(if(keySupportMA == maPeriod3, keySupportMAUpper, Double.NaN), if(keySupportMA == maPeriod3, keySupportMALower, Double.NaN), GlobalColor("MA3"));
+AddCloud(if(keySupportMA == maPeriod4, keySupportMAUpper, Double.NaN), if(keySupportMA == maPeriod4, keySupportMALower, Double.NaN), GlobalColor("MA4"));
+AddCloud(if(keySupportMA == maPeriod5, keySupportMAUpper, Double.NaN), if(keySupportMA == maPeriod5, keySupportMALower, Double.NaN), GlobalColor("MA5"));
+AddCloud(if(keySupportMA == maPeriod6, keySupportMAUpper, Double.NaN), if(keySupportMA == maPeriod6, keySupportMALower, Double.NaN), GlobalColor("MA6"));
+
+#***********************************************************************
+#Begin Buy Signal Section
+
+def meetsBuyLevel = buyPrice > keySupportMALower and buyPrice < keySupportMAUpper and buyPrice > keySupportMALower within statsLookBack bars;
+
+def shouldBuy = (areMAsStacked and meetsBuyLevel and isWithinTradingHours);
+
+plot buySignal = if(showBuySignals, shouldBuy, no);
+buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buySignal.SetDefaultColor(GlobalColor("BuySignal"));
+
+Alert(enableAlerts and buySignal, "StackedMAPullbackStrategy Buy Signal for " + GetSymbol(), sound = Sound.Ding);
+
+plot buyCrossUpSignal = if(showBuyCrossUpSignal, ma1 crosses above ma2 and areMAsStacked and isWithinTradingHours, no);
+buyCrossUpSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buyCrossUpSignal.SetDefaultColor(GlobalColor("BuyCrossUpSignal"));
+
+plot MA1Line = if(hideIrrelevantLines, if((keySupportMA == maPeriod1 or keySupportMA == maPeriod2), ma1, Double.NaN), ma1);
+MA1Line.SetDefaultColor(GlobalColor("MA1"));
+plot LastMA1 = ma1Level;
+LastMA1.SetDefaultColor(GlobalColor("MA1"));
+LastMA1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastMA1.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastMA1[minBubbleExpansion+1]) and !IsNaN(LastMA1[minBubbleExpansion+0]), LastMA1, maPeriod1 + " MA", GlobalColor("MA1"));
+
+#MA1Line.SetHiding((hideIrrelevantLines and keySupportMA != maPeriod1) or !areMAsStacked);
+
+plot MA2Line = if(hideIrrelevantLines, if((keySupportMA == maPeriod2 or keySupportMA == maPeriod3), ma2, Double.NaN), ma2);
+MA2Line.SetDefaultColor(GlobalColor("MA2"));
+plot LastMA2 = ma2Level;
+LastMA2.SetDefaultColor(GlobalColor("MA2"));
+LastMA2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastMA2.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastMA2[minBubbleExpansion+8]) and !IsNaN(LastMA2[minBubbleExpansion+7]), LastMA2, maPeriod2 + " MA", GlobalColor("MA2"));
+
+#ma2.SetHiding((hideIrrelevantLines and keySupportMA != maPeriod2) or !areMAsStacked);
+plot MA3Line = if(hideIrrelevantLines, if((keySupportMA == maPeriod3 or keySupportMA == maPeriod4), ma3, Double.NaN), ma3);
+MA3Line.SetDefaultColor(GlobalColor("MA3"));
+plot LastMA3 = ma3Level;
+LastMA3.SetDefaultColor(GlobalColor("MA3"));
+LastMA3.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastMA3.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastMA3[minBubbleExpansion+15]) and !IsNaN(LastMA3[minBubbleExpansion+14]), LastMA3, maPeriod3 + " MA", GlobalColor("MA3"));
+
+#ma3.SetHiding((hideIrrelevantLines and keySupportMA != maPeriod3) or !areMAsStacked);
+
+plot MA4Line = if(hideIrrelevantLines, if((keySupportMA == maPeriod4 or keySupportMA == maPeriod5), ma4, Double.NaN), ma4);
+MA4Line.SetDefaultColor(GlobalColor("MA4"));
+plot LastMA4 = ma4Level;
+LastMA4.SetDefaultColor(GlobalColor("MA4"));
+LastMA4.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastMA4.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastMA4[minBubbleExpansion+22]) and !IsNaN(LastMA4[minBubbleExpansion+21]), LastMA4, maPeriod4 + " MA", GlobalColor("MA4"));
+
+#ma4.SetHiding((hideIrrelevantLines and keySupportMA != maPeriod4) or !areMAsStacked);
+
+plot MA5Line = if(hideIrrelevantLines, if((keySupportMA == maPeriod5 or keySupportMA == maPeriod6), ma5, Double.NaN), ma5);
+MA5Line.SetDefaultColor(GlobalColor("MA5"));
+plot LastMA5 = ma5Level;
+LastMA5.SetDefaultColor(GlobalColor("MA5"));
+LastMA5.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastMA5.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastMA5[minBubbleExpansion+29]) and !IsNaN(LastMA5[minBubbleExpansion+28]), LastMA5, maPeriod5 + " MA", GlobalColor("MA5"));
+
+#ma5.SetHiding((hideIrrelevantLines and keySupportMA != maPeriod5) or !areMAsStacked);
+
+plot MA6Line = if(hideIrrelevantLines, if((keySupportMA == maPeriod6), ma6, Double.NaN), ma6);
+MA6Line.SetDefaultColor(GlobalColor("MA6"));
+plot LastMA6 = ma6Level;
+LastMA6.SetDefaultColor(GlobalColor("MA6"));
+LastMA6.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+LastMA6.SetHiding(hideIrrelevantLines or !showBubbles);
+AddChartBubble(!hideIrrelevantLines and showBubbles and IsNaN(LastMA6[minBubbleExpansion+37]) and !IsNaN(LastMA6[minBubbleExpansion+36]), LastMA6, maPeriod6 + " MA", GlobalColor("MA6"));
+
+#ma6.SetHiding((hideIrrelevantLines and keySupportMA != maPeriod6) or !areMAsStacked);
+
+Alert(enableAlerts and buyCrossUpSignal, "StackedMAPullbackStrategy MA1 Crossed Above MA2 Buy Signal for " + GetSymbol(), sound = Sound.Ding);
