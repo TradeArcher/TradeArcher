@@ -1,0 +1,159 @@
+#FOBO50 Daily Swing Long Indicator
+#Author: TradeArcher2020
+#Version: 1.0
+#Date Created: 00/04/2021
+#Description: The FOBO50 indicator is designed to help with a daily swing long strategy called the Fake out, Breakout from the 50 SMA.  It helps identify possible entries for swing long positions on pullbacks below the 50 SMA for a continuation move higher on bullish stocks. 
+
+declare hide_on_intraday;
+
+input FakeOutLookbackMax = 20;
+input TakeProfitATRFactor = 1.1;
+input SupportATRFactor = 1.0;
+
+def c = close(period = AggregationPeriod.DAY);
+def o = open(period = AggregationPeriod.DAY);
+def l = low(period = AggregationPeriod.DAY);
+def h = high(period = AggregationPeriod.DAY);
+def cbl = if(c > o, o, c);
+#def quarterlyHigh = high(period = AggregationPeriod.QUARTER);
+def ninetyDayHigh = fold ixx = 0 to 90 with hl90 = h do if(GetValue(h, ixx) > hl90, GetValue(h, ixx), hl90);
+
+plot ndh = ninetyDayHigh;
+ndh.SetDefaultColor(Color.RED);
+ndh.SetHiding(yes);
+
+plot tp = ninetyDayHigh - ATR() * TakeProfitATRFactor;
+tp.SetDefaultColor(Color.RED);
+tp.SetStyle(Curve.SHORT_DASH);
+#tp.SetHiding(yes);
+
+def weeklyCandleBodyLow = if(close(period = AggregationPeriod.WEEK) > open(period = AggregationPeriod.WEEK), open(period = AggregationPeriod.WEEK), close(period = AggregationPeriod.WEEK));
+def weeklyLow = low(period = AggregationPeriod.WEEK);
+def monthlyLow = low(period = AggregationPeriod.MONTH);
+
+plot sma50 = SimpleMovingAvg(c, 50);
+sma50.SetDefaultColor(Color.MAGENTA);
+sma50.SetLineWeight(2);
+
+plot sma200 = SimpleMovingAvg(c, 200);
+sma200.SetDefaultColor(Color.GREEN);
+sma200.SetLineWeight(2);
+
+def isBullish = sma50 > sma200;
+
+def isInPullbackZone = c < sma50 and c > sma200 and isBullish;
+
+def daysUnder50 = if(isInPullbackZone, daysUnder50[1] + 1, 0);
+
+#def lastBreakoutDay = fold ix = daysUnder50 + 1 to 252 with count = 0 while GetValue(c, ix) > GetValue(sma50, ix) do count + 1;
+
+def bn = BarNumber();
+
+def high90BN = if(high == ninetyDayHigh, bn, high90BN[1]);
+def daysSinceHigh = bn - high90BN;
+
+def breakoutBN = if(c > sma50 and c[1] <= sma50, bn, breakoutBN[1]);
+def lastBreakoutDay = bn - breakoutBN;
+
+def rangeMidpoint = sma200 + ((sma50 - sma200) / 2);
+def atrRange = ATR() * SupportATRFactor;
+def rangeHigh = if(rangeMidpoint + atrRange > sma50, sma50, rangeMidpoint + atrRange);
+def rangeLow = if(rangeMidpoint - atrRange < sma200, sma200, rangeMidpoint - atrRange);
+
+plot rmp = rangeMidpoint;
+rmp.SetStyle(Curve.SHORT_DASH);
+rmp.SetDefaultColor(Color.LIME);
+
+#def weeklySupport = fold ix = 0 to 252 while GetValue(weeklyLow, ix+5) > GetValue(rangeLow, ix) and GetValue(weeklyLow, ix+5) < GetValue(rangeHigh, ix) do GetValue(weeklyLow, ix+5);
+
+#def monthlySupport = fold ix1 = 0 to 252 while GetValue(monthlyLow, ix1+20) > GetValue(rangeLow, ix1) and GetValue(monthlyLow, ix1+20) < GetValue(rangeHigh, ix1) do GetValue(monthlyLow, ix1+20);
+
+def weeklySupport = fold ix = 0 to 252 with wsLine = Double.NaN while IsNaN(wsLine) do if((GetValue(weeklyLow, ix+1) between rangeLow and rangeHigh), GetValue(weeklyLow, ix+1), Double.NaN);
+
+def monthlySupport = fold ix1 = 0 to 252 with msLine = Double.NaN while IsNaN(msLine) do if((GetValue(monthlyLow, ix1+1) between rangeLow and rangeHigh), GetValue(monthlyLow, ix1+1), Double.NaN);
+
+#AddLabel(yes, weeklySupport);
+plot ws = if(weeklySupport == 0, Double.NaN, weeklySupport);
+ws.SetDefaultColor(Color.LIGHT_GREEN);
+
+plot ms = if(monthlySupport == 0, Double.NaN, monthlySupport);
+ms.SetDefaultColor(Color.DARK_GREEN);
+
+AddCloud(ws, ms, Color.LIGHT_GREEN, Color.DARK_GREEN, showBorder = Yes);
+
+#def isInBuyRange = ((l > rangeLow and l < rangeHigh) or (h > rangeLow and h < rangeHigh)) and ((ms between l and h) or (ws between l and h));
+
+def keySupportUpper = if(ws >= ms, ws, ms);
+def keySupportLower = if(ws < ms, ws, ms);
+def isInBuyRange = ((l >= keySupportLower and l <= keySupportUpper) or (h >= keySupportLower and h <= keySupportUpper));# and ((ms between l and h) or (ws between l and h));
+
+#plot lastWeeklyLow = weeklyLow[1];
+#plot lastMonthlyLow = monthlyLow[1];
+
+def isSettingUp = isInPullbackZone and lastBreakoutDay <= FakeOutLookbackMax and daysSinceHigh > lastBreakoutDay and isInBuyRange;
+
+def abpt = if(isSettingUp, if(l <= keySupportLower, keySupportLower + ((keySupportUpper - keySupportLower)/2), keySupportUpper), Double.NaN);
+
+def atrRange2 = ATR() * SupportATRFactor;
+def stopLossLow = sma200 - atrRange2;
+def stoplossHigh = sma200 + atrRange2/2;
+
+def weeklyStoploss = fold ix2 = 0 to 252 with wslLine = Double.NaN while IsNaN(wslLine) do if((GetValue(weeklyLow, ix2+1) between stopLossLow and stoplossHigh), GetValue(weeklyLow, ix2+1), wslLine);
+
+def monthlyStoploss = fold ix3 = 0 to 252 with mslLine = Double.NaN while IsNaN(mslLine) do if((GetValue(monthlyLow, ix3+1) between stopLossLow and stoplossHigh), GetValue(monthlyLow, ix3+1), mslLine);
+
+#AddLabel(yes, weeklySupport);
+plot wsl = if(weeklyStoploss == 0, Double.NaN, weeklyStoploss);
+wsl.SetDefaultColor(Color.LIGHT_RED);
+
+plot msl = if(monthlyStoploss == 0, Double.NaN, monthlyStoploss);
+msl.SetDefaultColor(Color.DARK_RED);
+
+AddCloud(wsl, msl, Color.LIGHT_RED, Color.DARK_RED, showBorder = Yes);
+
+plot buySignal = isSettingUp;
+buySignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+buySignal.SetDefaultColor(Color.LIME);
+buySignal.SetLineWeight(2);
+buySignal.SetHiding(yes);
+
+plot averageBuyPriceTarget = abpt;
+averageBuyPriceTarget.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+averageBuyPriceTarget.SetDefaultColor(Color.LIME);
+averageBuyPriceTarget.SetLineWeight(2);
+
+def isStoploss = if(msl > wsl, msl, wsl) > low;# or close crosses below sma50;
+
+plot stoplossSignal = isStoploss;
+stoplossSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+stoplossSignal.SetDefaultColor(Color.RED);
+stoplossSignal.SetLineWeight(2);
+stoplossSignal.SetHiding(yes);
+
+plot stoplossPrice = if(msl > wsl, msl, wsl);
+stoplossSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+stoplossSignal.SetDefaultColor(Color.RED);
+stoplossSignal.SetLineWeight(2);
+stoplossSignal.SetHiding(yes);
+
+def isTakeProfits1 = high >= sma50 and high < tp;
+
+plot takeProfitsSignal1 = isTakeProfits1;
+takeProfitsSignal1.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+takeProfitsSignal1.SetDefaultColor(Color.YELLOW);
+takeProfitsSignal1.SetLineWeight(2);
+takeProfitsSignal1.SetHiding(yes);
+
+def isTakeProfits2 = high >= tp;
+
+plot takeProfitsSignal2 = isTakeProfits2;
+takeProfitsSignal2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+takeProfitsSignal2.SetDefaultColor(Color.GREEN);
+takeProfitsSignal2.SetLineWeight(2);
+takeProfitsSignal2.SetHiding(yes);
+
+def tpFib = if(buySignal, tp + ((tp - sma50) * 1.272), tpFib[1]);
+plot takeProfitsFibExt = tpFib;
+takeProfitsFibExt.SetDefaultColor(Color.LIGHT_RED);
+takeProfitsFibExt.SetStyle(Curve.MEDIUM_DASH);
+#takeProfitsFibExt.SetHiding(yes);
