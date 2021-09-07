@@ -1,0 +1,18 @@
+def sma50 = MovingAverage(length = 50, data = CLOSE);
+def sma200 = MovingAverage(length = 200, data = CLOSE);
+
+def isBullish = sma50 > sma200;
+
+def isBreakout = close > sma50 and (low < sma50 or close[1] < sma50) and isBullish;
+def isSettingUp = close < sma50 and close > sma200 and isBullish;
+
+def daysUnder50 = if(isSettingUp, daysUnder50[1] + 1, 0);
+
+def lastBreakoutDay = fold ix = daysUnder50 + 1 to 252 with count = 0 while GetValue(close, ix) > GetValue(sma50, ix) do count + 1;
+
+AddLabel(isBreakout, "Breakout", Color.GREEN);
+#AddLabel(isSettingUp, lastBreakoutDay + (daysUnder50/100), Color.LIME);
+AddLabel(!isBreakout and !isSettingUp, " ", Color.CURRENT);
+
+plot value = if(isSettingUp,  lastBreakoutDay + (daysUnder50/100), Double.NaN);
+value.SetDefaultColor(Color.LIME);

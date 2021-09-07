@@ -1,0 +1,107 @@
+
+declare hide_on_intraday;
+
+input FakeOutLookbackMax = 20;
+input SupportATRFactor = 1.0;
+
+def c = close(period = AggregationPeriod.DAY);
+def o = open(period = AggregationPeriod.DAY);
+def l = low(period = AggregationPeriod.DAY);
+def h = high(period = AggregationPeriod.DAY);
+def cbl = if(c > o, o, c);
+#def quarterlyHigh = high(period = AggregationPeriod.QUARTER);
+def ninetyDayHigh = fold ixx = 0 to 90 with hl90 = h do if(GetValue(h, ixx) > hl90, GetValue(h, ixx), hl90);
+
+def ndh = ninetyDayHigh;
+
+def weeklyCandleBodyLow = if(close(period = AggregationPeriod.WEEK) > open(period = AggregationPeriod.WEEK), open(period = AggregationPeriod.WEEK), close(period = AggregationPeriod.WEEK));
+def weeklyLow = low(period = AggregationPeriod.WEEK);
+def monthlyLow = low(period = AggregationPeriod.MONTH);
+
+def sma50 = SimpleMovingAvg(c, 50);
+
+def sma200 = SimpleMovingAvg(c, 200);
+
+def isBullish = sma50 > sma200;
+
+def isInPullbackZone = c < sma50 and c > sma200 and isBullish;
+
+def daysUnder50 = if(isInPullbackZone, daysUnder50[1] + 1, 0);
+
+#def lastBreakoutDay = fold ix = daysUnder50 + 1 to 252 with count = 0 while GetValue(c, ix) > GetValue(sma50, ix) do count + 1;
+
+def bn = BarNumber();
+
+def high90BN = if(high == ninetyDayHigh, bn, high90BN[1]);
+def daysSinceHigh = bn - high90BN;
+
+def breakoutBN = if(c > sma50 and c[1] <= sma50, bn, breakoutBN[1]);
+def lastBreakoutDay = bn - breakoutBN;
+
+def rangeMidpoint = sma200 + ((sma50 - sma200) / 2);
+def atrRange = ATR() * SupportATRFactor;
+def rangeHigh = if(rangeMidpoint + atrRange > sma50, sma50, rangeMidpoint + atrRange);
+def rangeLow = if(rangeMidpoint - atrRange < sma200, sma200, rangeMidpoint - atrRange);
+
+def rmp = rangeMidpoint;
+
+#def weeklySupport = fold ix = 0 to 252 while GetValue(weeklyLow, ix+5) > GetValue(rangeLow, ix) and GetValue(weeklyLow, ix+5) < GetValue(rangeHigh, ix) do GetValue(weeklyLow, ix+5);
+
+#def monthlySupport = fold ix1 = 0 to 252 while GetValue(monthlyLow, ix1+20) > GetValue(rangeLow, ix1) and GetValue(monthlyLow, ix1+20) < GetValue(rangeHigh, ix1) do GetValue(monthlyLow, ix1+20);
+
+def weeklySupport = fold ix = 0 to 252 with wsLine = Double.NaN while IsNaN(wsLine) do if((GetValue(weeklyLow, ix+1) between rangeLow and rangeHigh), GetValue(weeklyLow, ix+1), Double.NaN);
+
+def monthlySupport = fold ix1 = 0 to 252 with msLine = Double.NaN while IsNaN(msLine) do if((GetValue(monthlyLow, ix1+1) between rangeLow and rangeHigh), GetValue(monthlyLow, ix1+1), Double.NaN);
+
+#AddLabel(yes, weeklySupport);
+def ws = if(weeklySupport == 0, Double.NaN, weeklySupport);
+
+def ms = if(monthlySupport == 0, Double.NaN, monthlySupport);
+
+#AddCloud(ws, ms, Color.LIGHT_GREEN, Color.DARK_GREEN, showBorder = Yes);
+
+#def isInBuyRange = ((l > rangeLow and l < rangeHigh) or (h > rangeLow and h < rangeHigh)) and ((ms between l and h) or (ws between l and h));
+
+def keySupportUpper = if(ws >= ms, ws, ms);
+def keySupportLower = if(ws < ms, ws, ms);
+def isInBuyRange = ((l >= keySupportLower and l <= keySupportUpper) or (h >= keySupportLower and h <= keySupportUpper));# and ((ms between l and h) or (ws between l and h));
+
+#plot lastWeeklyLow = weeklyLow[1];
+#plot lastMonthlyLow = monthlyLow[1];
+
+def isSettingUp = isInPullbackZone and lastBreakoutDay <= FakeOutLookbackMax and daysSinceHigh > lastBreakoutDay and isInBuyRange;
+
+#def abpt = if(isSettingUp, if(l <= keySupportLower, keySupportLower + ((keySupportUpper - keySupportLower)/2), keySupportUpper), Double.NaN);
+
+#def atrRange2 = ATR() * SupportATRFactor;
+#def stopLossLow = sma200 - atrRange2;
+#def stoplossHigh = sma200 + atrRange2/2;
+
+#def weeklyStoploss = fold ix2 = 0 to 252 with wslLine = Double.NaN while IsNaN(wslLine) do if((GetValue(weeklyLow, ix2+1) between stopLossLow and stoplossHigh), GetValue(weeklyLow, ix2+1), wslLine);
+
+#def monthlyStoploss = fold ix3 = 0 to 252 with mslLine = Double.NaN while IsNaN(mslLine) do if((GetValue(monthlyLow, ix3+1) between stopLossLow and stoplossHigh), GetValue(monthlyLow, ix3+1), mslLine);
+
+#AddLabel(yes, weeklySupport);
+#def wsl = if(weeklyStoploss == 0, Double.NaN, weeklyStoploss);
+
+#def msl = if(monthlyStoploss == 0, Double.NaN, monthlyStoploss);
+
+#AddCloud(wsl, msl, Color.LIGHT_RED, Color.DARK_RED, showBorder = Yes);
+
+def buySignal = isSettingUp;
+
+#def isStoploss = if(msl > wsl, msl, wsl) > low;# or close crosses below sma50;
+
+#def stoplossSignal = isStoploss;
+
+def isBreakout = c > sma50 and (c < sma50 within 3 bars);
+def isNearBuyZone = c < sma50 and c > sma200;
+
+AddLabel(yes, "4 - N/A", Color.CURRENT);
+AddLabel(isBreakout, "3 - Breakout", Color.GREEN);
+#AddLabel(isSettingUp, lastBreakoutDay + (daysUnder50/100), Color.LIME);
+AddLabel(isNearBuyZone, "2 - Watch", Color.DARK_GREEN);
+AddLabel(buySignal and !isBreakout, "1 - Buy", Color.LIME);
+#AddLabel(!isBreakout and !buySignal and !isNearBuyZone, "4 - N/A", Color.CURRENT);
+
+
