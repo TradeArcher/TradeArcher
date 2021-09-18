@@ -1,0 +1,15 @@
+def ma50 = MovingAverage(AverageType.SIMPLE, CLOSE, length = 50);
+def ma200 = MovingAverage(AverageType.SIMPLE, CLOSE, 200);
+
+def isBullish = ma50 > ma200;
+
+plot meetsCriteria = 
+        close > ma200 #still above the 200 simple moving average
+    and 
+        close < ma50 #currently below the 50 simple moving average
+    and 
+        close[1] > ma50 #but was just above the 50 simple moving average the last 2 days
+    and 
+        close[2] > ma50 
+    and 
+        isBullish; #The 50 simple moving average is above the 200 simple moving average is bullish
