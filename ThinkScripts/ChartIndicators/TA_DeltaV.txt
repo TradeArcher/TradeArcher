@@ -1,37 +1,287 @@
-#VWAP Market Hours Chart Indicator
+#Delta V
 #Author: TradeArcher2020
 #Version: 0.1
-#Date Created: 11/22/2020
+#Date Created: 09/18/2021
 
-#Given that VWAP is a cumulative indicator, meaning the more bars on the chart the more data is uses for its calculations, and volume increases significantly during market hours, it can be nice to have a VWAP that starts at market open instead of during the premarket.  This indicator plots the VWAP starting at market open until market close.
+#hint: Calculates the difference (aka Delta) between the current volume and the average historic volume.
+#hint PeriodLookBack: The number of days to use to calculate the average for the current candle. (Recommended using 21 or less for performance reasons)
+#hint NormalizeOutlierVolumeDiffs: If yes, this will attempt to prevent wildly large volume spikes (that can often be data glitches in the chart) from skewing the oscillator layout.
+#hint VolumeDiffMethod: Defaults to "daily".  This determines how the oscilator values are calculated.  Daily uses the total daily volume.  Current uses just the current candle.  Period uses the total volume for the current period (Premarket, Open, Zombie, Reversal and After Hours). "dc2" is the Daily + the current divided by 2. And "dpc3" is the daily + the period + the current divided by 3.
+#hint ShowBubbles: Turned off by default.  When turned on, bubbles will show up at the end of every key time period (End of Day, Premarkt, Open, Zombie, Reversal, After Hours) showing the total percent difference in volume for the period compared to the average.  Useful for research purposes looking back at historical volume trends.
 
-#NOTE: It only works on the intraday chart.
+input PeriodLookBack = 21; #hint PeriodLookBack: The number of days back used to calculate the average.
+#input PercentAboveAverageForSignal = 300;
+input ShowOscillator = yes;
+input PercentUp1 = 50;
+input PercentUp2 = 100;
+input PercentUp3 = 200;
+input PercentUp4 = 1000;
+input PercentDown1 = 50;
+input PercentDown2 = 100;
+input ShowBubbles = no;
+input ShowSignals = yes;
+input NormalizeOutlierVolumeDiffs = yes;
+input VolumeDiffMethod = {"dpc3", "dc2", default "daily", "period", "current"};
+input ShortEMALength = 3;
+input LongEMALength = 60;
 
 declare hide_on_daily;
+declare lower;
+declare real_size;
 
-def isRollover = GetYYYYMMDD() != GetYYYYMMDD()[1];
+def dayStart = 0000;
+def dayEnd = 2359;
+def openStart = 0930;
+def zombieStart = 1030;
+def reversalStart = 1400;
+def ahStart = 1600;
 
-def beforeStart = GetTime() < RegularTradingStart(GetYYYYMMDD());
+def dayRollover = GetYYYYMMDD();
+def isNewDay = CompoundValue(1, dayRollover != dayRollover[1], yes);
+def isPremarket = SecondsFromTime(dayStart) >= 0 and SecondsTillTime(openStart) > 0;
+def isOpen = SecondsFromTime(openStart) >= 0 and SecondsTillTime(zombieStart) > 0;
+def isZombie = SecondsFromTime(zombieStart) >= 0 and SecondsTillTime(reversalStart) > 0;
+def isReversal = SecondsFromTime(reversalStart) >= 0 and SecondsTillTime(ahStart) > 0;
+def isAfterHours = SecondsFromTime(ahStart) >= 0 and SecondsTillTime(dayEnd) >= 0;
 
-def afterEnd = GetTime() > RegularTradingEnd(GetYYYYMMDD());
+def day = GetDay();
+def lastDay = GetLastDay();
+def isToday = If(day == lastDay, 1, 0);
+def hasPremarketStartedToday = if(isToday, yes, no);
+def hasOpenStartedToday = CompoundValue(1, isToday and SecondsFromTime(openStart) >= 0, yes);
+def hasZombieStartedToday = CompoundValue(1, isToday and SecondsFromTime(zombieStart) >= 0, yes);
+def hasReversalStartedToday = CompoundValue(1, isToday and SecondsFromTime(reversalStart) >= 0, yes);
+def hasAfterHoursStartedToday = CompoundValue(1, isToday and SecondsFromTime(ahStart) >= 0, yes);
 
-def firstBarOfDay = if (beforeStart[1] == 1 and beforeStart == 0) or (isRollover and beforeStart == 0) then 1 else 0;
+def runningVolumeForDay = if(isNewDay, volume, runningVolumeForDay[1] + volume);
+def runningVolumeForPremarket = if(isNewDay, volume, if(isPremarket, runningVolumeForPremarket[1] + volume, runningVolumeForPremarket[1]));
+def runningVolumeForOpen = if(isOpen and !isOpen[1], volume, if(isOpen, runningVolumeForOpen[1] + volume, RunningVolumeForOpen[1]));
+def runningVolumeForZombie = if(isZombie and !isZombie[1], volume, if(isZombie, runningVolumeForZombie[1] + volume, runningVolumeForZombie[1]));
+def runningVolumeForReversal = if(isReversal and !isReversal[1], volume, if(isReversal, runningVolumeForReversal[1] + volume, runningVolumeForReversal[1]));
+def runningVolumeForAfterHours = if(isAfterHours and !isAfterHours[1], volume, if(isAfterHours, runningVolumeForAfterHours[1] + volume, runningVolumeForAfterHours[1]));
 
-def lastBarOfDay = if((afterEnd[-1] == 1 and afterEnd == 0) or (isRollover[-1] and firstBarOfDay[-1]), 1, 0);
 
-def firstBarNumber = If(firstBarOfDay, BarNumber(), firstBarNumber[1]);
-def lastBarNumber = If(lastBarOfDay, BarNumber(), lastBarNumber[1]);
+def currentAggregationPeriod = GetAggregationPeriod();
 
-def isMarketOpened = firstBarNumber > 0 and lastBarNumber == 0;
+def barsPerDay = 86400000 / currentAggregationPeriod;
 
-def cumulativePeriod = if(BarNumber() - firstBarNumber > 0, BarNumber() - firstBarNumber, 1);
-def typicalPrice = (high + low + close) / 3;
-def typicalPriceVolume = typicalPrice * volume;
+def foldLength = PeriodLookBack * barsPerDay;
 
-def cumulativeTypicalPriceVolume = fold typicalPriceVolumeIx = 0 to cumulativePeriod with typicalPriceVolumeTotal = 0 do typicalPriceVolumeTotal + getValue(typicalPriceVolume, typicalPriceVolumeIx);
-def cumulativeVolume = fold volumeIx = 0 to cumulativePeriod with volumeTotal = 0 do volumeTotal + getValue(volume, volumeIx);
-def vwapValue = if(isMarketOpened, cumulativeTypicalPriceVolume / cumulativeVolume, Double.NaN);
+def barTime = Floor((SecondsFromTime(dayStart) * 1000) / currentAggregationPeriod);
 
-#AddChartBubble(isMarketOpened, high, firstBarNumber + "\n" + lastBarNumber);
+def volumeAtTimeSum = 
+(fold ix = 0 to PeriodLookBack with vSum do vSum + 
+    (fold ixx = 0 to barsPerDay with subVSum do
+         subVSum + (if(GetValue(barTime, ((ix+1)*(ixx+1))-1) == barTime, GetValue(volume, ((ix+1)*(ixx+1)-1)), 0))));
 
-plot vwapMarketOpen = vwapValue;
+#def avgVolumeAtTime = volumeAtTimeSum / PeriodLookBack;
+def avgVolumeAtTime = if(IsNaN(volumeAtTimeSum / PeriodLookBack), 0.001, volumeAtTimeSum / PeriodLookBack);
+
+def runningAvgVolumeForDay = if(isNewDay, avgVolumeAtTime, runningVolumeForDay[1] + avgVolumeAtTime);
+def runningAvgVolumeForPremarket = if(isNewDay, avgVolumeAtTime, if(isPremarket, runningAvgVolumeForPremarket[1] + avgVolumeAtTime, runningAvgVolumeForPremarket[1]));
+def runningAvgVolumeForOpen = if(isOpen and !isOpen[1], avgVolumeAtTime, if(isOpen, runningAvgVolumeForOpen[1] + avgVolumeAtTime, runningAvgVolumeForOpen[1]));
+def runningAvgVolumeForZombie = if(isZombie and !isZombie[1], avgVolumeAtTime, if(isZombie, runningAvgVolumeForZombie[1] + avgVolumeAtTime, runningAvgVolumeForZombie[1]));
+def runningAvgVolumeForReversal = if(isReversal and !isReversal[1], avgVolumeAtTime, if(isReversal, runningAvgVolumeForReversal[1] + avgVolumeAtTime, runningAvgVolumeForReversal[1]));
+def runningAvgVolumeForAfterHours = if(isAfterHours and !isAfterHours[1], avgVolumeAtTime, if(isAfterHours, runningAvgVolumeForAfterHours[1] + avgVolumeAtTime, runningAvgVolumeForAfterHours[1]));
+
+
+def dpc3 = (runningVolumeForDay + (if isPremarket then runningVolumeForPremarket else if isOpen then runningVolumeForOpen else if isZombie then runningVolumeForZombie else if isReversal then runningVolumeForReversal else runningVolumeForAfterHours) + volume) / 3;
+def dc2 = (runningVolumeForDay + volume) / 2;
+def dailyVolume = runningVolumeForDay;
+def p = (if isPremarket then runningVolumeForPremarket else if isOpen then runningVolumeForOpen else if isZombie then runningVolumeForZombie else if isReversal then runningVolumeForReversal else runningVolumeForAfterHours);
+def currentVolume = volume;
+
+def avgDpc3 = (runningAvgVolumeForDay + (if isPremarket then runningAvgVolumeForPremarket else if isOpen then runningAvgVolumeForOpen else if isZombie then runningAvgVolumeForZombie else if isReversal then runningAvgVolumeForReversal else runningAvgVolumeForAfterHours) + avgVolumeAtTime) / 3;
+def avgDc2 = (runningAvgVolumeForDay + avgVolumeAtTime) / 2;
+def avgDailyVolume = runningAvgVolumeForDay;
+def avgPeriodVolume = (if isPremarket then runningAvgVolumeForPremarket else if isOpen then runningAvgVolumeForOpen else if isZombie then runningAvgVolumeForZombie else if isReversal then runningAvgVolumeForReversal else runningAvgVolumeForAfterHours);
+def avgCurrentVolume = avgVolumeAtTime;
+def volVal;
+def avgVolVal;
+
+switch (VolumeDiffMethod) {
+    case "current":
+        volVal = currentVolume;
+        avgVolVal = avgCurrentVolume;
+    case "daily":
+        volVal = dailyVolume;
+        avgVolVal = avgDailyVolume;
+    case "dc2":
+        volVal = dc2;
+        avgVolVal = avgDc2;
+    case "dpc3":
+        volVal = dpc3;
+        avgVolVal = avgDc2;
+    case "period":
+        volVal = p;
+        avgVolVal = avgPeriodVolume;
+}
+
+plot ZeroLine = 0;
+ZeroLine.SetDefaultColor(Color.WHITE);
+
+def tmpDiffAvg = if(IsNaN(volVal) or IsNaN(avgVolVal) or volVal == 0 or avgVolVal == 0, 0.0, ((volVal - avgVolVal) / avgVolVal) * 100);
+def diffAvg = Round(tmpDiffAvg, 0);
+
+def oscillatorValue = if(NormalizeOutlierVolumeDiffs and AbsValue(tmpDiffAvg)/10 > AbsValue(tmpDiffAvg[1]), if(IsNaN(tmpDiffAvg[1]), 0.001, tmpDiffAvg[1]*2), tmpDiffAvg);
+
+plot DiffEmaLong = MovAvgExponential(oscillatorValue, LongEMALength);
+DiffEmaLong.SetDefaultColor(Color.MAGENTA);
+plot DiffEmaShort = MovAvgExponential(oscillatorValue, ShortEMALength);
+DiffEmaShort.SetDefaultColor(Color.WHITE);
+
+#AddChartBubble(NormalizeOutlierVolumeDiffs and AbsValue(diffAvg)/10 > AbsValue(diffAvg[1]), 0, diffAvg + "\n" + diffAvg[1]);
+plot VolumeForcastOscillator = oscillatorValue;
+VolumeForcastOscillator.DefineColor("Up", CreateColor(0, 255, 255));
+VolumeForcastOscillator.DefineColor("UpDecreasing", CreateColor(0, 0, 255));
+VolumeForcastOscillator.DefineColor("Down", CreateColor(255, 0, 0));
+VolumeForcastOscillator.DefineColor("DownDecreasing",  CreateColor(255, 255, 0));
+VolumeForcastOscillator.AssignValueColor(
+if VolumeForcastOscillator[1] < VolumeForcastOscillator then if VolumeForcastOscillator[0] >= 0 
+then VolumeForcastOscillator.Color("Up") 
+else VolumeForcastOscillator.Color("DownDecreasing")  
+else if VolumeForcastOscillator >= 0 
+then VolumeForcastOscillator.Color("UpDecreasing")  
+else VolumeForcastOscillator.Color("Down") );
+VolumeForcastOscillator.SetPaintingStrategy(PaintingStrategy.HISTOGRAM);
+VolumeForcastOscillator.SetLineWeight(5);
+
+def percentOfAvg = Round(((volume - avgVolumeAtTime)/ avgVolumeAtTime) * 100, 0);
+
+def dayPctDiff = Round(((runningVolumeForDay - runningAvgVolumeForDay) / runningAvgVolumeForDay) * 100, 0);
+def premarketPctDiff = Round(((runningVolumeForPremarket - runningAvgVolumeForPremarket) / runningAvgVolumeForPremarket) * 100, 0);
+def openPctDiff = Round(((runningVolumeForOpen - runningAvgVolumeForOpen) / runningAvgVolumeForOpen) * 100, 0);
+def zombiePctDiff = Round(((runningVolumeForZombie - runningAvgVolumeForZombie) / runningAvgVolumeForZombie) * 100, 0);
+def reversalPctDiff = Round(((runningVolumeForReversal - runningAvgVolumeForReversal) / runningAvgVolumeForReversal) * 100, 0);
+def afterHoursPctDiff = Round(((runningVolumeForAfterHours - runningAvgVolumeForAfterHours) / runningAvgVolumeForAfterHours) * 100, 0);
+
+def dpd = Round(if(isNewDay, dayPctDiff, dpd[1]), 0);
+plot DayPercentDiffTotal = dpd;
+DayPercentDiffTotal.Hide();
+
+def pmpd = Round(if(isOpen and !isOpen[1], premarketPctDiff[1], pmpd[1]), 0);
+plot PremarketPercentDiffTotal = pmpd;
+PremarketPercentDiffTotal.Hide();
+
+def opd = Round(if(isZombie  and !isZombie[1], openPctDiff[1], opd[1]), 0);
+plot OpenPercentDiffTotal = opd;
+OpenPercentDiffTotal.Hide();
+
+def zpd = Round(if(isReversal  and !isReversal[1], zombiePctDiff[1], zpd[1]), 0);
+plot ZombiePercentDiffTotal = zpd;
+ZombiePercentDiffTotal.Hide();
+
+def rpd = Round(if(isAfterHours  and !isAfterHours[1], reversalPctDiff[1], rpd[1]), 0);
+plot ReversalPercentDiffTotal = rpd;
+ReversalPercentDiffTotal.Hide();
+
+def ahpd = Round(if(isNewDay, zombiePctDiff[1], ahpd[1]), 0);
+plot AfterHoursPercentDiffTotal = ahpd;
+AfterHoursPercentDiffTotal.Hide();
+
+AddChartBubble(ShowBubbles and isNewDay, 0, "Today:\n" + DayPercentDiffTotal + "%", color = if DayPercentDiffTotal > 1000 then Color.LIME else Color.WHITE);
+AddChartBubble(ShowBubbles and PremarketPercentDiffTotal != PremarketPercentDiffTotal[1], 0, "PM:\n" + PremarketPercentDiffTotal + "%", color = if PremarketPercentDiffTotal > 1000 then Color.LIME else Color.WHITE);
+AddChartBubble(ShowBubbles and OpenPercentDiffTotal != OpenPercentDiffTotal[1], 0, "Open:\n" + OpenPercentDiffTotal + "%", color = if OpenPercentDiffTotal > 1000 then Color.LIME else Color.WHITE);
+AddChartBubble(ShowBubbles and ZombiePercentDiffTotal != ZombiePercentDiffTotal[1], 0, "Zombie:\n" + ZombiePercentDiffTotal + "%", color = if ZombiePercentDiffTotal > 1000 then Color.LIME else Color.WHITE);
+AddChartBubble(ShowBubbles and ReversalPercentDiffTotal != ReversalPercentDiffTotal[1], 0, "Reversal:\n" + ReversalPercentDiffTotal + "%", color = if ReversalPercentDiffTotal > 1000 then Color.LIME else Color.WHITE);
+AddChartBubble(ShowBubbles and AfterHoursPercentDiffTotal != AfterHoursPercentDiffTotal[1], 0, "AH:\n" + AfterHoursPercentDiffTotal + "%", color = if AfterHoursPercentDiffTotal > 1000 then Color.LIME else Color.WHITE);
+
+DefineGlobalColor("PercentUp1", Color.DARK_GREEN);
+DefineGlobalColor("PercentUp2", Color.LIGHT_GREEN);
+DefineGlobalColor("PercentUp3", Color.GREEN);
+DefineGlobalColor("PercentUp4", Color.LIME);
+DefineGlobalColor("PercentDown1", Color.LIGHT_ORANGE);
+DefineGlobalColor("PercentDown2", Color.RED);
+
+AddLabel(yes, "Time Relative Volume Average % Differences", Color.WHITE);
+AddLabel(yes, "Day: " + runningVolumeForDay, Color.WHITE);
+AddLabel(yes, "Day Avg: " + runningAvgVolumeForDay, Color.WHITE);
+AddLabel(yes, "runningVolumeForAfterHours: " + runningVolumeForAfterHours, Color.WHITE);
+AddLabel(yes, "runningAvgVolumeForAfterHours: " + runningAvgVolumeForAfterHours, Color.WHITE);
+
+AddLabel(dayPctDiff >= PercentUp4, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp4"));
+AddLabel(dayPctDiff >= PercentUp3 and dayPctDiff < PercentUp4, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp3"));
+AddLabel(dayPctDiff >= PercentUp2 and dayPctDiff < PercentUp3, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp2"));
+AddLabel(dayPctDiff >= PercentUp1 and dayPctDiff < PercentUp2, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp1"));
+AddLabel(dayPctDiff <= -PercentDown1 and dayPctDiff > -PercentDown2, "Day: " + dayPctDiff + "%", GlobalColor("PercentDown1"));
+AddLabel(dayPctDiff <= -PercentDown2, "Day: " + dayPctDiff + "%", GlobalColor("PercentDown2"));
+AddLabel(dayPctDiff < PercentUp1 and dayPctDiff > -PercentDown1, "Day: " + dayPctDiff + "%", Color.WHITE);
+
+AddLabel(hasPremarketStartedToday and premarketPctDiff >= PercentUp4, "Premarket: " + premarketPctDiff + "%", GlobalColor("PercentUp4"));
+AddLabel(hasPremarketStartedToday and premarketPctDiff >= PercentUp3 and premarketPctDiff < PercentUp4, "Premarket: " + premarketPctDiff + "%", GlobalColor("PercentUp3"));
+AddLabel(hasPremarketStartedToday and premarketPctDiff >= PercentUp2 and premarketPctDiff < PercentUp3, "Premarket: " + premarketPctDiff + "%", GlobalColor("PercentUp2"));
+AddLabel(hasPremarketStartedToday and premarketPctDiff >= PercentUp1 and premarketPctDiff < PercentUp2, "Premarket: " + premarketPctDiff + "%", GlobalColor("PercentUp1"));
+AddLabel(hasPremarketStartedToday and premarketPctDiff <= -PercentDown2, "Premarket: " + premarketPctDiff + "%", GlobalColor("PercentDown2"));
+AddLabel(hasPremarketStartedToday and premarketPctDiff <= -PercentDown1 and premarketPctDiff > -PercentDown2, "Premarket: " + premarketPctDiff + "%", GlobalColor("PercentDown1"));
+AddLabel(hasPremarketStartedToday and premarketPctDiff < PercentUp1 and premarketPctDiff > -PercentDown1, "Premarket: " + premarketPctDiff + "%", Color.WHITE);
+
+AddLabel(hasOpenStartedToday and openPctDiff >= PercentUp4, "Open: " + openPctDiff + "%", GlobalColor("PercentUp4"));
+AddLabel(hasOpenStartedToday and openPctDiff >= PercentUp3 and openPctDiff < PercentUp4, "Open: " + openPctDiff + "%", GlobalColor("PercentUp3"));
+AddLabel(hasOpenStartedToday and openPctDiff >= PercentUp2 and openPctDiff < PercentUp3, "Open: " + openPctDiff + "%", GlobalColor("PercentUp2"));
+AddLabel(hasOpenStartedToday and openPctDiff >= PercentUp1 and openPctDiff < PercentUp2, "Open: " + openPctDiff + "%", GlobalColor("PercentUp1"));
+AddLabel(hasOpenStartedToday and openPctDiff <= -PercentDown2, "Open: " + openPctDiff + "%", GlobalColor("PercentDown2"));
+AddLabel(hasOpenStartedToday and openPctDiff <= -PercentDown1 and openPctDiff > -PercentDown2, "Open: " + openPctDiff + "%", GlobalColor("PercentDown1"));
+AddLabel(hasOpenStartedToday and openPctDiff < PercentUp1 and openPctDiff > -PercentDown1, "Open: " + openPctDiff + "%", Color.WHITE);
+
+AddLabel(hasZombieStartedToday and zombiePctDiff >= PercentUp4, "Zombie: " + zombiePctDiff + "%", GlobalColor("PercentUp4"));
+AddLabel(hasZombieStartedToday and zombiePctDiff >= PercentUp3 and zombiePctDiff < PercentUp4, "Zombie: " + zombiePctDiff + "%", GlobalColor("PercentUp3"));
+AddLabel(hasZombieStartedToday and zombiePctDiff >= PercentUp2 and zombiePctDiff < PercentUp3, "Zombie: " + zombiePctDiff + "%", GlobalColor("PercentUp2"));
+AddLabel(hasZombieStartedToday and zombiePctDiff >= PercentUp1 and zombiePctDiff < PercentUp2, "Zombie: " + zombiePctDiff + "%", GlobalColor("PercentUp1"));
+AddLabel(hasZombieStartedToday and zombiePctDiff <= -PercentDown2, "Zombie: " + zombiePctDiff + "%", GlobalColor("PercentDown2"));
+AddLabel(hasZombieStartedToday and zombiePctDiff <= -PercentDown1 and zombiePctDiff > -PercentDown2, "Zombie: " + zombiePctDiff + "%", GlobalColor("PercentDown1"));
+AddLabel(hasZombieStartedToday and zombiePctDiff < PercentUp1 and zombiePctDiff > -PercentDown1, "Zombie: " + zombiePctDiff + "%", Color.WHITE);
+
+AddLabel(hasReversalStartedToday and reversalPctDiff >= PercentUp4, "Reversal: " + reversalPctDiff + "%", GlobalColor("PercentUp4"));
+AddLabel(hasReversalStartedToday and reversalPctDiff >= PercentUp3 and reversalPctDiff < PercentUp4, "Reversal: " + reversalPctDiff + "%", GlobalColor("PercentUp3"));
+AddLabel(hasReversalStartedToday and reversalPctDiff >= PercentUp2 and reversalPctDiff < PercentUp3, "Reversal: " + reversalPctDiff + "%", GlobalColor("PercentUp2"));
+AddLabel(hasReversalStartedToday and reversalPctDiff >= PercentUp1 and reversalPctDiff < PercentUp2, "Reversal: " + reversalPctDiff + "%", GlobalColor("PercentUp1"));
+AddLabel(hasReversalStartedToday and reversalPctDiff <= -PercentDown2, "Reversal: " + reversalPctDiff + "%", GlobalColor("PercentDown2"));
+AddLabel(hasReversalStartedToday and reversalPctDiff <= -PercentDown1 and reversalPctDiff > -PercentDown2, "Reversal: " + reversalPctDiff + "%", GlobalColor("PercentDown1"));
+AddLabel(hasReversalStartedToday and reversalPctDiff < PercentUp1 and reversalPctDiff > -PercentDown1, "Reversal: " + reversalPctDiff + "%", Color.WHITE);
+
+AddLabel(hasAfterHoursStartedToday and afterHoursPctDiff >= PercentUp4, "After Hours: " + afterHoursPctDiff + "%", GlobalColor("PercentUp4"));
+AddLabel(hasAfterHoursStartedToday and afterHoursPctDiff >= PercentUp3 and afterHoursPctDiff < PercentUp4, "After Hours: " + afterHoursPctDiff + "%", GlobalColor("PercentUp3"));
+AddLabel(hasAfterHoursStartedToday and afterHoursPctDiff >= PercentUp2 and afterHoursPctDiff < PercentUp3, "After Hours: " + afterHoursPctDiff + "%", GlobalColor("PercentUp2"));
+AddLabel(hasAfterHoursStartedToday and afterHoursPctDiff >= PercentUp1 and afterHoursPctDiff < PercentUp2, "After Hours: " + afterHoursPctDiff + "%", GlobalColor("PercentUp1"));
+AddLabel(hasAfterHoursStartedToday and afterHoursPctDiff <= -PercentDown2, "After Hours: " + afterHoursPctDiff + "%", GlobalColor("PercentDown2"));
+AddLabel(hasAfterHoursStartedToday and afterHoursPctDiff <= -PercentDown1 and afterHoursPctDiff > -PercentDown2, "After Hours: " + afterHoursPctDiff + "%", GlobalColor("PercentDown1"));
+AddLabel(hasAfterHoursStartedToday and afterHoursPctDiff < PercentUp1 and afterHoursPctDiff > -PercentDown1, "After Hours: " + afterHoursPctDiff + "%", Color.WHITE);
+
+
+AddVerticalLine(isPremarket and !isPremarket[1], text = "Begin Premarket", color = Color.WHITE);
+
+AddVerticalLine(isOpen and !isOpen[1], text = "Begin Open", color = Color.WHITE);
+
+AddVerticalLine(isZombie and !isZombie[1], text = "Begin Zombie", color = Color.WHITE);
+
+AddVerticalLine(isReversal and !isReversal[1], text = "Begin Reversal", color = Color.WHITE);
+
+AddVerticalLine(isAfterHours and !isAfterHours[1], text = "Begin After Hours", color = Color.WHITE);
+
+plot spikeUpSignal = if(ShowSignals and VolumeForcastOscillator >= 0 and VolumeForcastOscillator crosses above DiffEmaLong, DiffEmaLong, Double.NaN);
+spikeUpSignal.SetDefaultColor(Color.LIME);
+spikeUpSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+
+plot spikeDownSignal = if(ShowSignals and VolumeForcastOscillator < 0 and VolumeForcastOscillator crosses below DiffEmaLong, DiffEmaLong, Double.NaN);
+spikeDownSignal.SetDefaultColor(Color.MAGENTA);
+spikeDownSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+
+plot crossUpSignal = if(ShowSignals and DiffEmaShort crosses above DiffEmaLong, DiffEmaShort, Double.NaN);
+crossUpSignal.SetDefaultColor(Color.LIME);
+crossUpSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.ARROW_UP);
+crossUpSignal.SetLineWeight(3);
+
+plot crossDownSignal =  if(ShowSignals and DiffEmaShort crosses below DiffEmaLong, DiffEmaShort, Double.NaN);
+crossDownSignal.SetDefaultColor(Color.MAGENTA);
+crossDownSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.ARROW_DOWN);
+crossDownSignal.SetLineWeight(3);
+
+plot crossMidlineUpSignal = if(ShowSignals and DiffEmaShort crosses above ZeroLine, ZeroLine, Double.NaN);
+crossMidlineUpSignal.SetDefaultColor(Color.GREEN);
+crossMidlineUpSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.ARROW_UP);
+crossMidlineUpSignal.SetLineWeight(3);
+
+plot crossMidlineDownSignal =  if(ShowSignals and DiffEmaShort crosses below ZeroLine, ZeroLine, Double.NaN);
+crossMidlineDownSignal.SetDefaultColor(Color.RED);
+crossMidlineDownSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.ARROW_DOWN);
+crossMidlineDownSignal.SetLineWeight(3);
