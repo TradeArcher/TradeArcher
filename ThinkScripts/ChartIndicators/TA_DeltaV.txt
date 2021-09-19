@@ -145,6 +145,7 @@ then VolumeForcastOscillator.Color("UpDecreasing")
 else VolumeForcastOscillator.Color("Down") );
 VolumeForcastOscillator.SetPaintingStrategy(PaintingStrategy.HISTOGRAM);
 VolumeForcastOscillator.SetLineWeight(5);
+VolumeForcastOscillator.SetHiding(!ShowOscillator);
 
 def percentOfAvg = Round(((volume - avgVolumeAtTime)/ avgVolumeAtTime) * 100, 0);
 
@@ -194,10 +195,8 @@ DefineGlobalColor("PercentDown1", Color.LIGHT_ORANGE);
 DefineGlobalColor("PercentDown2", Color.RED);
 
 AddLabel(yes, "Time Relative Volume Average % Differences", Color.WHITE);
-AddLabel(yes, "Day: " + runningVolumeForDay, Color.WHITE);
-AddLabel(yes, "Day Avg: " + runningAvgVolumeForDay, Color.WHITE);
-AddLabel(yes, "runningVolumeForAfterHours: " + runningVolumeForAfterHours, Color.WHITE);
-AddLabel(yes, "runningAvgVolumeForAfterHours: " + runningAvgVolumeForAfterHours, Color.WHITE);
+AddLabel(yes, "Daily Avg: " + runningAvgVolumeForDay, Color.WHITE);
+AddLabel(yes, "Day: " + runningVolumeForDay, if runningVolumeForDay > runningAvgVolumeForDay then Color.GREEN else Color.WHITE);
 
 AddLabel(dayPctDiff >= PercentUp4, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp4"));
 AddLabel(dayPctDiff >= PercentUp3 and dayPctDiff < PercentUp4, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp3"));
