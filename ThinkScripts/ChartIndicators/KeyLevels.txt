@@ -5,18 +5,33 @@
 
 def currentAggPrd = GetAggregationPeriod();
 def isIntraDay = currentAggPrd < AggregationPeriod.DAY;
-#AddLabel(!isIntraDay, "!Intraday");
 
-AddVerticalLine(isIntraDay and SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, text = "Begin Zombie Hours", color = Color.WHITE, stroke = Curve.FIRM);
+AddVerticalLine(visible = isIntraDay and SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, text = "Begin Zombie Hours", color = Color.WHITE);
 Alert(isIntraDay and SecondsFromTime(1030) == 0 and SecondsTillTime(1030) == 0, "ZOMBIE HOURS", sound = Sound.Chimes);
 
-AddVerticalLine(isIntraDay and SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, text = "Begin Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
-Alert(isIntraDay and SecondsFromTime(isIntraDay and 1500) == 0 and SecondsTillTime(1500) == 0, "REVERSAL HOUR", sound = Sound.Chimes);
+AddVerticalLine(visible = isIntraDay and SecondsFromTime(1400) == 0 and SecondsTillTime(1400) == 0, text = "Begin Zombie Reversal", color = Color.WHITE);
+Alert(isIntraDay and SecondsFromTime(isIntraDay and 1400) == 0 and SecondsTillTime(1400) == 0, "REVERSAL HOUR", sound = Sound.Chimes);
 
-DefineGlobalColor("ZombieHours", Color.LIGHT_GRAY);
-plot upper = if(isIntraDay and SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.POSITIVE_INFINITY, Double.NaN);
-plot lower = if(isIntraDay and SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.NEGATIVE_INFINITY, Double.NaN);
-AddCloud(upper, lower, color1 = GlobalColor("ZombieHours"), color2 = GlobalColor("ZombieHours"));
+AddVerticalLine(visible = isIntraDay and SecondsFromTime(1500) == 0 and SecondsTillTime(1500) == 0, text = "Warning to Shorts", color = Color.ORANGE);
+Alert(isIntraDay and SecondsFromTime(isIntraDay and 1500) == 0 and SecondsTillTime(1500) == 0, "WARNING TO SHORTS", sound = Sound.Chimes);
+
+AddVerticalLine(visible = isIntraDay and SecondsFromTime(1530) == 0 and SecondsTillTime(1530) == 0, text = "Shorts GET OUT NOW!!!", color = Color.RED);
+Alert(isIntraDay and SecondsFromTime(isIntraDay and 1530) == 0 and SecondsTillTime(1530) == 0, "SHORTS GET OUT NOW!!!", sound = Sound.Chimes);
+
+AddLabel(isIntraDay and SecondsFromTime(1030) >= 0 and SecondsTillTime(1400) >= 0, "Zombie Hours", Color.GREEN);
+AddLabel(isIntraDay and SecondsFromTime(1400) >= 0 and SecondsTillTime(1500) >= 0, "Reversal Hour", Color.DARK_GREEN);
+AddLabel(isIntraDay and SecondsFromTime(1500) >= 0 and SecondsTillTime(1530) >= 0, "WARNING TO SHORTS", Color.ORANGE);
+AddLabel(isIntraDay and SecondsFromTime(1530) >= 0 and SecondsTillTime(1600) >= 0, "SHORTS GET OUT NOW!!!", Color.RED);
+
+#def isRollover = SecondsFromTime(0) == 0;
+#def cumulativeVolume = if(isRollover, volume, cumulativeVolume[1] + volume);
+#def cumulativePMVolume = if(SecondsFromTime(0) >= 0 and SecondsTillTime(0930) > 0, volume, cumulativePMVolume[1] + volume);
+#AddLabel(isIntraDay, "PM Volume:" + Round(cumulativePMVolume*0.000001, 2) + "M", Color.WHITE);
+#AddLabel(isIntraDay, "Total Volume:" + Round(cumulativeVolume*0.000001, 2) + "M", Color.WHITE);
+#DefineGlobalColor("ZombieHours", Color.LIGHT_GRAY);
+#plot upper = if(isIntraDay and SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.POSITIVE_INFINITY, Double.NaN);
+#plot lower = if(isIntraDay and SecondsFromTime(1030) >= 0 and SecondsTillTime(1500) >= 0, Double.NEGATIVE_INFINITY, Double.NaN);
+#AddCloud(upper, lower, color1 = GlobalColor("ZombieHours"), color2 = GlobalColor("ZombieHours"));
 
 #AddVerticalLine(SecondsFromTime(1600) == 0 and SecondsTillTime(1600) == 0, text = "End Reversal Hour", color = Color.WHITE, stroke = Curve.FIRM);
 #End Time Specific Lines
@@ -53,7 +68,7 @@ previousDaysLow.setHiding(!isIntraDay);
 #Begin Today's Open
 def todaysOpen = open(period = dayMinAggPrd);
 plot dailyOpen = todaysOpen;
-dailyOpen.AssignValueColor(if close < dailyOpen then Color.DOWNTICK else Color.UPTICK);
+dailyOpen.AssignValueColor(if IsNaN(close) then Color.LIGHT_GRAY else if close < dailyOpen then Color.DOWNTICK else Color.UPTICK);
 dailyOpen.SetStyle(Curve.LONG_DASH);
 dailyOpen.setHiding(!isIntraDay);
 #End Today's Open
@@ -181,3 +196,50 @@ FiftyTwoWeekLow.SetStyle(Curve.SHORT_DASH);
 
 AddLabel(isIntraDay, "52Wk H/L = " + FiftyTwoWeekHigh + " / " + FiftyTwoWeekLow, Color.WHITE);
 #End 52 Week H/L
+
+#Begin Whole/Half dollar lines
+def TodaysDailyClose = close(period = atrAggPeriod);
+
+plot WholeDollarLow = RoundDown(TodaysDailyClose, 0);
+WholeDollarLow.SetDefaultColor(color = Color.LIGHT_GRAY);
+WholeDollarLow.SetStyle(Curve.SHORT_DASH);
+WholeDollarLow.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+WholeDollarLow.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
+
+plot WholeDollarLow2 = RoundDown(TodaysDailyClose, 0) - 1;
+WholeDollarLow2.SetDefaultColor(color = Color.LIGHT_GRAY);
+WholeDollarLow2.SetStyle(Curve.SHORT_DASH);
+WholeDollarLow2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+WholeDollarLow2.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
+
+plot WholeDollarHigh = RoundUp(TodaysDailyClose, 0);
+WholeDollarHigh.SetDefaultColor(color = Color.LIGHT_GRAY);
+WholeDollarHigh.SetStyle(Curve.SHORT_DASH);
+WholeDollarHigh.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+WholeDollarHigh.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
+
+plot WholeDollarHigh2 = RoundUp(TodaysDailyClose, 0) + 1;
+WholeDollarHigh2.SetDefaultColor(color = Color.LIGHT_GRAY);
+WholeDollarHigh2.SetStyle(Curve.SHORT_DASH);
+WholeDollarHigh2.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+WholeDollarHigh2.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
+
+plot HalfDollar = RoundDown(TodaysDailyClose, 0) + 0.5;
+HalfDollar.SetDefaultColor(color = Color.LIGHT_GRAY);
+HalfDollar.SetStyle(Curve.SHORT_DASH);
+HalfDollar.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+HalfDollar.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
+
+plot HalfDollar1Up = RoundDown(TodaysDailyClose, 0) + 1.5;
+HalfDollar1Up.SetDefaultColor(color = Color.LIGHT_GRAY);
+HalfDollar1Up.SetStyle(Curve.SHORT_DASH);
+HalfDollar1Up.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+HalfDollar1Up.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
+
+plot HalfDollar1Down = RoundDown(TodaysDailyClose, 0) - 1.5;
+HalfDollar1Down.SetDefaultColor(color = Color.LIGHT_GRAY);
+HalfDollar1Down.SetStyle(Curve.SHORT_DASH);
+HalfDollar1Down.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HORIZONTAL);
+HalfDollar1Down.setHiding(currentAggPrd > AggregationPeriod.FIFTEEN_MIN);
+#End Whole/Half dollar lines
+
