@@ -12,6 +12,7 @@
 input PeriodLookBack = 21; #hint PeriodLookBack: The number of days back used to calculate the average.
 #input PercentAboveAverageForSignal = 300;
 input ShowOscillator = yes;
+input ShowZeroLine = yes;
 input PercentUp1 = 50;
 input PercentUp2 = 100;
 input PercentUp3 = 200;
@@ -119,6 +120,7 @@ switch (VolumeDiffMethod) {
 
 plot ZeroLine = 0;
 ZeroLine.SetDefaultColor(Color.WHITE);
+ZeroLine.SetHiding(!ShowZeroLine);
 
 def tmpDiffAvg = if(IsNaN(volVal) or IsNaN(avgVolVal) or volVal == 0 or avgVolVal == 0, 0.0, ((volVal - avgVolVal) / avgVolVal) * 100);
 def diffAvg = Round(tmpDiffAvg, 0);
