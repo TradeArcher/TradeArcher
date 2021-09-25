@@ -1,6 +1,6 @@
 #Advanced Pivots
 #Author: TradeArcher2020
-#Version: 0.5
+#Version: 0.6
 #Date Created: 07/25/2021
 #Description: This indicator is based on the MIC Pivots script. It simply adds the ability to base the pivot source line on the VWAP, Close, Open, HLOC4, HLOC+VWAP5 or HLC+VWAP4 from the previous day in addition to the HLC3 from the original script.
 
@@ -67,19 +67,46 @@ plot S2 = if(!showOnlyToday, SS2, HighestAll(SS2));
 plot S3 = if(!showOnlyToday, SS3, HighestAll(SS3));
 plot S4 = if(!showOnlyToday, SS4, HighestAll(SS4));
 
-DefineGlobalColor("Resistance", Color.DARK_RED);
-DefineGlobalColor("Neutral", Color.LIGHT_GRAY);
-DefineGlobalColor("Support", Color.DARK_GREEN);
+def isPremarket = SecondsFromTime(0) >= 0 and SecondsTillTime(0930) > 0;
 
-R4.SetDefaultColor(GlobalColor("Resistance"));
-R3.SetDefaultColor(GlobalColor("Resistance"));
-R2.SetDefaultColor(GlobalColor("Resistance"));
-R1.SetDefaultColor(GlobalColor("Resistance"));
-PP.SetDefaultColor(GlobalColor("Neutral"));
-S1.SetDefaultColor(GlobalColor("Support"));
-S2.SetDefaultColor(GlobalColor("Support"));
-S3.SetDefaultColor(GlobalColor("Support"));
-S4.SetDefaultColor(GlobalColor("Support"));
+def strength = if (isPremarket) then
+    if (PPP < PC and close > PPP) then 
+        1
+    else if (PPP > PC and close > PPP) then
+        2
+    else if (PPP > PC and close < PPP) then
+        -1
+    else
+        0
+else
+    strength[1];
+
+AddLabel(yes, “Previous Close: ” + PC, Color.WHITE);
+
+AddLabel(strength == 2, "VERY BULLISH", Color.LIME);
+AddLabel(strength ==1, "BULLISH", Color.GREEN);
+AddLabel(strength == -1, "BEARISH", Color.RED);
+AddLabel(strength == 0, "NEUTRAL", Color.WHITE);
+
+DefineGlobalColor("PP", Color.WHITE);
+DefineGlobalColor("S1", CreateColor(153, 255, 153));
+DefineGlobalColor("S2", CreateColor(51, 255, 51));
+DefineGlobalColor("S3", CreateColor(0, 204, 0));
+DefineGlobalColor("S4", CreateColor(0, 102, 0));
+DefineGlobalColor("R1", CreateColor(255, 153, 153));
+DefineGlobalColor("R2", CreateColor(255, 51, 51));
+DefineGlobalColor("R3", CreateColor(204, 0, 0));
+DefineGlobalColor("R4", CreateColor(102, 0, 0));
+
+R4.SetDefaultColor(GlobalColor("R4"));
+R3.SetDefaultColor(GlobalColor("R3"));
+R2.SetDefaultColor(GlobalColor("R2"));
+R1.SetDefaultColor(GlobalColor("R1"));
+PP.SetDefaultColor(GlobalColor("PP"));
+S1.SetDefaultColor(GlobalColor("S1"));
+S2.SetDefaultColor(GlobalColor("S2"));
+S3.SetDefaultColor(GlobalColor("S3"));
+S4.SetDefaultColor(GlobalColor("S4"));
 
 R4.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
 R3.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
