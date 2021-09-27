@@ -1,0 +1,60 @@
+#Accumulation / Distribution Volume Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 09/27/2021
+
+#HINT: Designed for the Daily Chart.  It looks for volume days higher than the Threshold Percent above the average. If green, it counts as accumulation volume. Red high volume is distribution.  If there the total average volume for accumulation days is greater than distribution, we classify the stock as being accumulated by institutions.  Otherwise it is classified as in distribution (being sold by institutions).
+
+input AvgType = AverageType.SIMPLE;
+input Length = 50;
+input ThresholdPercent = 200;
+input ShowBubbles = no;
+input ShowArrows = no;
+input Lookback = 90;
+
+def isInLookback = IsNaN(close[-Lookback]);
+
+def avgVol = MovingAverage(AvgType, volume, Length);
+
+def volPctDiffFromAvg = ((volume - avgVol) / avgVol) * 100;
+
+def isGreen = close > open;
+
+def isAV = isInLookback and volPctDiffFromAvg >= ThresholdPercent and isGreen;
+
+def avCount = if(isAV, avCount[1] + 1, avCount[1]);
+def avTotal = if(isAV, avTotal[1] + volume, avTotal[1]);
+def avgAV = if(IsNaN(avTotal / avCount), 0, avTotal / avCount);
+
+def isHVRD = isInLookback and volPctDiffFromAvg >= ThresholdPercent and !isGreen;
+
+
+def hvrdCount = if(isHVRD, hvrdCount[1] + 1, hvrdCount[1]);
+def hvrdTotal = if(isHVRD, hvrdTotal[1] + volume, hvrdTotal[1]);
+def avgHVRD = if(IsNaN(hvrdTotal / hvrdCount), 0, hvrdTotal / hvrdCount);
+
+def isAccumulation = avgAV > avgHVRD and avCount >= hvrdCount;
+def isDistribution = avgAV < avgHVRD and avCount <= hvrdCount;
+AddLabel(isAccumulation, "Accumulation", Color.LIGHT_GREEN);
+AddLabel(isDistribution, "Distribution", Color.RED);
+
+AddChartBubble(ShowBubbles and isHVRD, high, "Distribution\nVolume");
+AddChartBubble(ShowBubbles and isAV, high, "Accumulation\nVolume", color = Color.LIGHT_GREEN);
+
+plot IsAccumulationVolume = isAV;
+IsAccumulationVolume.SetDefaultColor(Color.LIGHT_GREEN);
+IsAccumulationVolume.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_UP);
+IsAccumulationVolume.SetLineWeight(3);
+IsAccumulationVolume.SetHiding(!ShowArrows);
+
+plot IsDistributionVolume = isHVRD;
+IsDistributionVolume.SetDefaultColor(Color.RED);
+IsDistributionVolume.SetPaintingStrategy(paintingStrategy = PaintingStrategy.BOOLEAN_ARROW_DOWN);
+IsDistributionVolume.SetLineWeight(3);
+IsDistributionVolume.SetHiding(!ShowArrows);
+
+plot IsAccumulating = isAccumulation;
+IsAccumulating.Hide();
+
+plot IsDistributing = isDistribution;
+IsDistributing.Hide();
