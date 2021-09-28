@@ -1,6 +1,6 @@
 #Delta V
 #Author: TradeArcher2020
-#Version: 0.1
+#Version: 0.2
 #Date Created: 09/18/2021
 
 #hint: Calculates the difference (aka Delta) between the current volume and the average historic volume.
@@ -75,6 +75,7 @@ def volumeAtTimeSum =
     (fold ixx = 0 to barsPerDay with subVSum do
          subVSum + (if(GetValue(barTime, ((ix+1)*(ixx+1))-1) == barTime, GetValue(volume, ((ix+1)*(ixx+1)-1)), 0))));
 
+
 #def avgVolumeAtTime = volumeAtTimeSum / PeriodLookBack;
 def avgVolumeAtTime = if(IsNaN(volumeAtTimeSum / PeriodLookBack), 0.001, volumeAtTimeSum / PeriodLookBack);
 
@@ -133,21 +134,21 @@ plot DiffEmaShort = MovAvgExponential(oscillatorValue, ShortEMALength);
 DiffEmaShort.SetDefaultColor(Color.WHITE);
 
 #AddChartBubble(NormalizeOutlierVolumeDiffs and AbsValue(diffAvg)/10 > AbsValue(diffAvg[1]), 0, diffAvg + "\n" + diffAvg[1]);
-plot VolumeForcastOscillator = oscillatorValue;
-VolumeForcastOscillator.DefineColor("Up", CreateColor(0, 255, 255));
-VolumeForcastOscillator.DefineColor("UpDecreasing", CreateColor(0, 0, 255));
-VolumeForcastOscillator.DefineColor("Down", CreateColor(255, 0, 0));
-VolumeForcastOscillator.DefineColor("DownDecreasing",  CreateColor(255, 255, 0));
-VolumeForcastOscillator.AssignValueColor(
-if VolumeForcastOscillator[1] < VolumeForcastOscillator then if VolumeForcastOscillator[0] >= 0 
-then VolumeForcastOscillator.Color("Up") 
-else VolumeForcastOscillator.Color("DownDecreasing")  
-else if VolumeForcastOscillator >= 0 
-then VolumeForcastOscillator.Color("UpDecreasing")  
-else VolumeForcastOscillator.Color("Down") );
-VolumeForcastOscillator.SetPaintingStrategy(PaintingStrategy.HISTOGRAM);
-VolumeForcastOscillator.SetLineWeight(5);
-VolumeForcastOscillator.SetHiding(!ShowOscillator);
+plot VolumeDiffOscillator = oscillatorValue;
+VolumeDiffOscillator.DefineColor("Up", CreateColor(0, 255, 255));
+VolumeDiffOscillator.DefineColor("UpDecreasing", CreateColor(0, 0, 255));
+VolumeDiffOscillator.DefineColor("Down", CreateColor(255, 0, 0));
+VolumeDiffOscillator.DefineColor("DownDecreasing",  CreateColor(255, 255, 0));
+VolumeDiffOscillator.AssignValueColor(
+if VolumeDiffOscillator[1] < VolumeDiffOscillator then if VolumeDiffOscillator[0] >= 0 
+then VolumeDiffOscillator.Color("Up") 
+else VolumeDiffOscillator.Color("DownDecreasing")  
+else if VolumeDiffOscillator >= 0 
+then VolumeDiffOscillator.Color("UpDecreasing")  
+else VolumeDiffOscillator.Color("Down") );
+VolumeDiffOscillator.SetPaintingStrategy(if !ShowOscillator then PaintingStrategy.POINTS else PaintingStrategy.HISTOGRAM);
+VolumeDiffOscillator.SetLineWeight(5);
+#VolumeForcastOscillator.SetHiding(!ShowOscillator);
 
 def percentOfAvg = Round(((volume - avgVolumeAtTime)/ avgVolumeAtTime) * 100, 0);
 
@@ -196,9 +197,41 @@ DefineGlobalColor("PercentUp4", Color.LIME);
 DefineGlobalColor("PercentDown1", Color.LIGHT_ORANGE);
 DefineGlobalColor("PercentDown2", Color.RED);
 
-AddLabel(yes, "Time Relative Volume Average % Differences", Color.WHITE);
+def adv = SimpleMovingAvg(volume(period = AggregationPeriod.DAY)[1], PeriodLookBack);
+
+def isVolumeGreaterThanDailyAverage = runningVolumeForDay > adv and runningVolumeForDay[1] < adv;
+def isVolumeGreaterThanDailyAverage2X = runningVolumeForDay > adv*2 and runningVolumeForDay[1] < adv*2;
+def isVolumeGreaterThanDailyAverage3X = runningVolumeForDay > adv*3 and runningVolumeForDay[1] < adv*3;
+def isVolumeGreaterThanDailyAverage4X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*4;
+def isVolumeGreaterThanDailyAverage5X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*5;
+def isVolumeGreaterThanDailyAverage6X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*6;
+def isVolumeGreaterThanDailyAverage7X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*7;
+def isVolumeGreaterThanDailyAverage8X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*8;
+def isVolumeGreaterThanDailyAverage9X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*9;
+def isVolumeGreaterThanDailyAverage10X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*10;
+
+#AddChartBubble(isVolumeGreaterThanDailyAverage, 0, runningVolumeForDay, color = Color.LIGHT_GRAY);
+#AddChartBubble(isVolumeGreaterThanDailyAverage, 0, adv);
+
+AddVerticalLine(isVolumeGreaterThanDailyAverage, "EXCEEDED AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage2X, "2X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage3X, "3X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage4X, "4X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage5X, "5X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage6X, "6X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage7X, "7X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage8X, "8X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage9X, "9X AVG DAILY VOLUME", Color.MAGENTA);
+AddVerticalLine(isVolumeGreaterThanDailyAverage10X, "10X AVG DAILY VOLUME", Color.MAGENTA);
+
+AddLabel(runningVolumeForDay > adv and runningVolumeForDay <= adv*2, "EXCEEDED AVG DAILY VOLUME", Color.MAGENTA);
+AddLabel(runningVolumeForDay > adv*2 and runningVolumeForDay <= adv*3, "> 2X AVG DAILY VOLUME", Color.MAGENTA);
+AddLabel(runningVolumeForDay > adv*3 and runningVolumeForDay <= adv*4, "> 3X AVG DAILY VOLUME", Color.MAGENTA);
+AddLabel(runningVolumeForDay > adv*4, "> 4X AVG DAILY VOLUME", Color.MAGENTA);
+
+AddLabel(yes, "Vol/Avg % Differences", Color.WHITE);
 AddLabel(yes, "Daily Avg: " + runningAvgVolumeForDay, Color.WHITE);
-AddLabel(yes, "Day: " + runningVolumeForDay, if runningVolumeForDay > runningAvgVolumeForDay then Color.GREEN else Color.WHITE);
+AddLabel(yes, "Today: " + runningVolumeForDay, if runningVolumeForDay > runningAvgVolumeForDay then Color.GREEN else Color.WHITE);
 
 AddLabel(dayPctDiff >= PercentUp4, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp4"));
 AddLabel(dayPctDiff >= PercentUp3 and dayPctDiff < PercentUp4, "Day: " + dayPctDiff + "%", GlobalColor("PercentUp3"));
@@ -259,11 +292,11 @@ AddVerticalLine(isReversal and !isReversal[1], text = "Begin Reversal", color = 
 
 AddVerticalLine(isAfterHours and !isAfterHours[1], text = "Begin After Hours", color = Color.WHITE);
 
-plot spikeUpSignal = if(ShowSignals and VolumeForcastOscillator >= 0 and VolumeForcastOscillator crosses above DiffEmaLong, DiffEmaLong, Double.NaN);
+plot spikeUpSignal = if(ShowSignals and VolumeDiffOscillator >= 0 and VolumeDiffOscillator crosses above DiffEmaLong, DiffEmaLong, Double.NaN);
 spikeUpSignal.SetDefaultColor(Color.LIME);
 spikeUpSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
 
-plot spikeDownSignal = if(ShowSignals and VolumeForcastOscillator < 0 and VolumeForcastOscillator crosses below DiffEmaLong, DiffEmaLong, Double.NaN);
+plot spikeDownSignal = if(ShowSignals and VolumeDiffOscillator < 0 and VolumeDiffOscillator crosses below DiffEmaLong, DiffEmaLong, Double.NaN);
 spikeDownSignal.SetDefaultColor(Color.MAGENTA);
 spikeDownSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
 
