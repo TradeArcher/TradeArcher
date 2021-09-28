@@ -1,6 +1,6 @@
 #Delta V
 #Author: TradeArcher2020
-#Version: 0.2
+#Version: 0.1
 #Date Created: 09/18/2021
 
 #hint: Calculates the difference (aka Delta) between the current volume and the average historic volume.
@@ -213,16 +213,18 @@ def isVolumeGreaterThanDailyAverage10X = runningVolumeForDay > adv*4 and running
 #AddChartBubble(isVolumeGreaterThanDailyAverage, 0, runningVolumeForDay, color = Color.LIGHT_GRAY);
 #AddChartBubble(isVolumeGreaterThanDailyAverage, 0, adv);
 
-AddVerticalLine(isVolumeGreaterThanDailyAverage, "EXCEEDED AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage2X, "2X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage3X, "3X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage4X, "4X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage5X, "5X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage6X, "6X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage7X, "7X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage8X, "8X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage9X, "9X AVG DAILY VOLUME", Color.MAGENTA);
-AddVerticalLine(isVolumeGreaterThanDailyAverage10X, "10X AVG DAILY VOLUME", Color.MAGENTA);
+DefineGlobalColor("AvgVolumeRotation", Color.MAGENTA);
+
+AddVerticalLine(isVolumeGreaterThanDailyAverage, "EXCEEDED AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage2X, "2X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage3X, "3X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage4X, "4X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage5X, "5X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage6X, "6X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage7X, "7X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage8X, "8X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage9X, "9X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage10X, "10X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
 
 AddLabel(runningVolumeForDay > adv and runningVolumeForDay <= adv*2, "EXCEEDED AVG DAILY VOLUME", Color.MAGENTA);
 AddLabel(runningVolumeForDay > adv*2 and runningVolumeForDay <= adv*3, "> 2X AVG DAILY VOLUME", Color.MAGENTA);
