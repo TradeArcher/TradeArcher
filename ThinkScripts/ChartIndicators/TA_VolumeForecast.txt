@@ -1,0 +1,58 @@
+#Volume Forecast Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 09/28/2021
+
+#hint: Displays vertical lines on the chart when the current day's volume exceeds the daily average by 1X through 10X
+
+input PeriodLookBack = 21; #hint PeriodLookBack: The number of days back used to calculate the average.
+
+def dayRollover = GetYYYYMMDD();
+def isNewDay = CompoundValue(1, dayRollover != dayRollover[1], yes);
+
+def runningVolumeForDay = if(isNewDay, volume, runningVolumeForDay[1] + volume);
+
+def adv = SimpleMovingAvg(volume(period = AggregationPeriod.DAY)[1], PeriodLookBack);
+
+def isVolumeGreaterThanDailyAverage = runningVolumeForDay > adv and runningVolumeForDay[1] < adv;
+def isVolumeGreaterThanDailyAverage2X = runningVolumeForDay > adv*2 and runningVolumeForDay[1] < adv*2;
+def isVolumeGreaterThanDailyAverage3X = runningVolumeForDay > adv*3 and runningVolumeForDay[1] < adv*3;
+def isVolumeGreaterThanDailyAverage4X = runningVolumeForDay > adv*4 and runningVolumeForDay[1] < adv*4;
+def isVolumeGreaterThanDailyAverage5X = runningVolumeForDay > adv*5 and runningVolumeForDay[1] < adv*5;
+def isVolumeGreaterThanDailyAverage6X = runningVolumeForDay > adv*6 and runningVolumeForDay[1] < adv*6;
+def isVolumeGreaterThanDailyAverage7X = runningVolumeForDay > adv*7 and runningVolumeForDay[1] < adv*7;
+def isVolumeGreaterThanDailyAverage8X = runningVolumeForDay > adv*7 and runningVolumeForDay[1] < adv*8;
+def isVolumeGreaterThanDailyAverage9X = runningVolumeForDay > adv*8 and runningVolumeForDay[1] < adv*9;
+def isVolumeGreaterThanDailyAverage10X = runningVolumeForDay > adv*10 and runningVolumeForDay[1] < adv*10;
+
+#AddChartBubble(isVolumeGreaterThanDailyAverage, 0, runningVolumeForDay, color = Color.LIGHT_GRAY);
+#AddChartBubble(isVolumeGreaterThanDailyAverage, 0, adv);
+
+DefineGlobalColor("AvgVolumeRotation", Color.MAGENTA);
+DefineGlobalColor("AvgVolumeRotation50", Color.RED);
+DefineGlobalColor("AvgVolumeRotation100", Color.ORANGE);
+DefineGlobalColor("AvgVolumeRotation200", Color.YELLOW);
+DefineGlobalColor("AvgVolumeRotation300", CreateColor(0, 255, 204));
+DefineGlobalColor("AvgVolumeRotation400", CreateColor(0, 255, 153));
+DefineGlobalColor("AvgVolumeRotation500", CreateColor(0, 255, 102));
+DefineGlobalColor("AvgVolumeRotation600", CreateColor(0, 255, 51));
+DefineGlobalColor("AvgVolumeRotation700", CreateColor(0, 255, 0));
+DefineGlobalColor("AvgVolumeRotation800", CreateColor(51, 255, 0));
+DefineGlobalColor("AvgVolumeRotation900", CreateColor(102, 255, 0));
+DefineGlobalColor("AvgVolumeRotation1000", CreateColor(153, 255, 0));
+DefineGlobalColor("AvgVolumeRotationGT1000", Color.LIME);
+
+AddVerticalLine(isVolumeGreaterThanDailyAverage, "EXCEEDED AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage2X, "2X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage3X, "3X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage4X, "4X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage5X, "5X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage6X, "6X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage7X, "7X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage8X, "8X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage9X, "9X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+AddVerticalLine(isVolumeGreaterThanDailyAverage10X, "10X AVG DAILY VOLUME", GlobalColor("AvgVolumeRotation"));
+
+def percentOfAvgVolume = (AbsValue(runningVolumeForDay/adv)*100);
+
+AddLabel(yes, "Today's Volume Percent of Avg: " + Round(percentOfAvgVolume, 0) + "%", if percentOfAvgVolume < 50 then GlobalColor("AvgVolumeRotation50") else if percentOfAvgVolume >= 50 and percentOfAvgVolume < 100 then GlobalColor("AvgVolumeRotation100") else if percentOfAvgVolume >= 100 and percentOfAvgVolume < 200 then GlobalColor("AvgVolumeRotation200") else if percentOfAvgVolume >= 200 and percentOfAvgVolume < 300 then GlobalColor("AvgVolumeRotation300") else if percentOfAvgVolume >= 300 and percentOfAvgVolume < 400 then GlobalColor("AvgVolumeRotation400") else if percentOfAvgVolume >= 400 and percentOfAvgVolume < 500 then GlobalColor("AvgVolumeRotation500") else if percentOfAvgVolume >= 500 and percentOfAvgVolume < 600 then GlobalColor("AvgVolumeRotation600") else if percentOfAvgVolume >= 600 and percentOfAvgVolume < 700 then GlobalColor("AvgVolumeRotation700") else if percentOfAvgVolume >= 700 and percentOfAvgVolume < 800 then GlobalColor("AvgVolumeRotation800") else if percentOfAvgVolume >= 800 and percentOfAvgVolume < 900 then GlobalColor("AvgVolumeRotation900") else if percentOfAvgVolume >= 900 and percentOfAvgVolume < 1000 then GlobalColor("AvgVolumeRotation1000") else if percentOfAvgVolume >= 1000 then GlobalColor("AvgVolumeRotationGT1000") else Color.WHITE);
