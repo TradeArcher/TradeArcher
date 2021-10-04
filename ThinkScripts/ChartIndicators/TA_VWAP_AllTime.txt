@@ -1,17 +1,16 @@
-#VWAP Year to Date Anchor Chart Indicator
+#VWAP All Time Anchor Chart Indicator
 #Author: TradeArcher2020
 #Version: 0.1
 #Date Created: 10/04/2021
 
-#This indicator will recalculate the VWAP starting from every new year.
+#This indicator will calculate the VWAP from the beginning of the chart however far back the chart goes.
+#Hint: If you want the VWAP from the beginning of when a ticker started trading, then you need to show that far back on the chart.
 
 
 input numDev1 = 1.0;
 input numDev2 = 2.0;
 
-def startOverVwap = GetYear() != GetYear()[1];
-
-def isPeriodRolled = compoundValue(1, startOverVwap != startOverVwap[1], yes);
+def isPeriodRolled = compoundValue(1, no, yes);
 
 def volumeSum;
 def volumeVwapSum;
@@ -44,8 +43,8 @@ LowerBand.setStyle(Curve.SHORT_DASH);
 UpperBand2.setStyle(Curve.LONG_DASH);
 LowerBand2.setStyle(Curve.LONG_DASH);
 
-UpperBand.setDefaultColor(Color.LIGHT_ORANGE);
-LowerBand.setDefaultColor(Color.LIGHT_ORANGE);
+UpperBand.setDefaultColor(Color.LIGHT_GREEN);
+LowerBand.setDefaultColor(Color.LIGHT_GREEN);
 
-UpperBand2.setDefaultColor(Color.LIGHT_ORANGE);
-LowerBand2.setDefaultColor(Color.LIGHT_ORANGE);
+UpperBand2.setDefaultColor(Color.LIGHT_GREEN);
+LowerBand2.setDefaultColor(Color.LIGHT_GREEN);
