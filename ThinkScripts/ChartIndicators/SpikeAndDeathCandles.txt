@@ -7,6 +7,8 @@
 
 input atrLength = 60;
 input atrFactor = 4;
+input minATRGreater = 2;
+input minATRLess = 2;
 input lookback = 15;
 input showBubbles = no;
 input showAssholeMeter = yes;
@@ -20,13 +22,11 @@ def isBigCandle = tr / currentATR >= atrFactor;
 def isRed = close < open;
 
 def candleBodyTop = if(isRed, open, close);
-def candleBodyBottom = if(isRed, open, close);
+def candleBodyBottom = if(isRed, close, open);
 
-def isDeathCandle = isRed and isBigCandle and (close - low) / (high - low) <= 0.15 and candleBodyBottom - (candleBodyBottom * 0.75) < candleBodyBottom[1];
+def isDeathCandle = isRed and isBigCandle and (close - low) / (high - low) <= 0.15 and candleBodyBottom + (currentATR * minATRLess) < candleBodyBottom[1];
 
-#AddChartBubble(isDeathCandle, high, candleBodyBottom + " | " + (candleBodyBottom - (candleBodyBottom * 0.75)) + " | " + candleBodyBottom[1]);
-
-def isSpikeCandle = !isRed and isBigCandle and (high - close) / (high - low) <= 0.15 and candleBodyTop > candleBodyTop[1] - (candleBodyTop[1] * 0.5);
+def isSpikeCandle = !isRed and isBigCandle and (high - close) / (high - low) <= 0.15 and candleBodyTop - (currentATR * minATRGreater) > candleBodyTop[1];
 
 def bn = BarNumber();
 
@@ -39,9 +39,9 @@ def bcRatio = if(scCount > 0, AbsValue(dcCount / scCount), 0);
 
 def assholeMeter = if(bcRatio > 0 and bcRatio < 2 and dcCount > 0 and scCount > 0, dcCount + scCount, 0);
 
-AddChartBubble(showBubbles and assholeMeter[1] > 1 and assholeMeter[1] > assholeMeter[2], high, "Asshole Meter: " + if assholeMeter[1] > 1 then "ANNOYING!" else if assholeMeter[1] > 2 then "TOYING WITH YOU!" else if assholeMeter[1] > 3 then "ASSHOLE!" else "TOTAL DICK!!!", if assholeMeter[1] > 1 then Color.YELLOW else if assholeMeter[1] > 2 then Color.ORANGE else if assholeMeter[1] > 3 then Color.DARK_RED else Color.LIGHT_RED);
-#AddChartBubble(assholeMeter > 2, high, assholeMeter, if assholeMeter > 2 then Color.YELLOW else if assholeMeter > 3 then Color.ORANGE else if assholeMeter > 4 then Color.DARK_RED else Color.LIGHT_RED);
-AddLabel(assholeMeter > 1, "Asshole Meter: " + if assholeMeter[1] > 1 then "ANNOYING!" else if assholeMeter[1] > 2 then "TOYING WITH YOU!" else if assholeMeter[1] > 3 then "ASSHOLE!" else "TOTAL DICK!!!", if assholeMeter > 1 then Color.YELLOW else if assholeMeter > 2 then Color.ORANGE else if assholeMeter > 3 then Color.DARK_RED else Color.LIGHT_RED);
+AddChartBubble(showBubbles and assholeMeter > 1 and assholeMeter > assholeMeter[1], high, "Asshole Meter: " + if assholeMeter == 1 then "ANNOYING!" else if assholeMeter == 2 then "TOYING WITH YOU!" else if assholeMeter == 3 then "ASSHOLE!" else "TOTAL DICK!!!", if assholeMeter == 1 then Color.YELLOW else if assholeMeter == 2 then Color.ORANGE else if assholeMeter == 3 then Color.DARK_RED else Color.LIGHT_RED);
+
+AddLabel(assholeMeter > 1, "Asshole Meter: " + if assholeMeter == 2 then "ANNOYING!" else if assholeMeter == 3 then "TOYING WITH YOU!" else if assholeMeter == 4 then "ASSHOLE!" else "TOTAL DICK!!!", if assholeMeter == 2 then Color.YELLOW else if assholeMeter == 3 then Color.ORANGE else if assholeMeter == 4 then Color.DARK_RED else Color.LIGHT_RED);
 
 AddLabel(showAssholeMeter and assholeMeter <= 1, "Asshole Meter: Playing by the rules.", Color.WHITE);
 
