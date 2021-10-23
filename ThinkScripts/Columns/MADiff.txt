@@ -1,0 +1,39 @@
+#Moving Average Difference Column
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/23/2021
+
+input period = 200;
+input maType = averageType.SIMPLE;
+input maSource = close;
+input valueSource = close;
+input diffType = {default "Percent", "Value"}; 
+#HINT: To use price instead of percent, replace 
+#"{default "Percent", "Price"}" with 
+#"{"Percent", default "Price"}"
+input enableAlerts = yes;
+input overThresholdPercent = 10;
+input underThresholdPercent = 10;
+
+def MovingAvg = MovingAverage(maType, maSource, period);
+
+def diff = valueSource - MovingAvg;
+def percentDiff = (diff / MovingAvg) * 100;
+
+def labelValue;
+def diffTypeEnum;
+switch (diffType) {
+    case "Percent":
+        labelValue = Round(percentDiff, 2);
+        diffTypeEnum = 1;
+    case "Value":
+        labelValue = diff;
+        diffTypeEnum = 2;
+}
+
+plot maDiffValue = labelValue;
+maDiffValue.AssignValueColor(if labelValue >= 0 then if percentDiff >= overThresholdPercent then Color.LIME else Color.GREEN else if percentDiff <= -underThresholdPercent then Color.MAGENTA else Color.RED);
+
+Alert(enableAlerts and percentDiff >= overThresholdPercent,  GetSymbolPart() + ": Greater than " + overThresholdPercent + " above Moving Average", sound = Sound.Bell);
+
+Alert(enableAlerts and percentDiff <= -underThresholdPercent, GetSymbolPart() + ": Greater than " + underThresholdPercent + " below Moving Average", sound = Sound.Bell);
