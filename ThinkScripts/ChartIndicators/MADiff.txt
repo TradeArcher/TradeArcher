@@ -1,0 +1,36 @@
+#Moving Average Difference Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/23/2021
+
+input period = 200;
+input maType = averageType.SIMPLE;
+input maSource = close;
+input valueSource = close;
+input diffType = {default "Percent", "Price"};
+input enableAlerts = yes;
+input overThresholdPercent = 10;
+input underThresholdPercent = 10;
+
+plot MovingAvg = MovingAverage(maType, maSource, period);
+
+def diff = valueSource - MovingAvg;
+def percentDiff = (diff / MovingAvg) * 100;
+
+def labelValue;
+def diffTypeEnum;
+switch (diffType) {
+    case "Percent":
+        labelValue = Round(percentDiff, 2);
+        diffTypeEnum = 1;
+    case "Price":
+        labelValue = diff;
+        diffTypeEnum = 2;
+}
+
+AddLabel(diffTypeEnum == 1, "MA Diff: " + labelValue + "%", if labelValue >= 0 then if percentDiff >= overThresholdPercent then Color.LIME else Color.GREEN else if percentDiff <= -underThresholdPercent then Color.MAGENTA else Color.RED);
+AddLabel(diffTypeEnum == 2, "MA Diff: " + labelValue, if labelValue >= 0 then if percentDiff >= overThresholdPercent then Color.LIME else Color.GREEN else if percentDiff <= -underThresholdPercent then Color.MAGENTA else Color.RED);
+
+Alert(enableAlerts and percentDiff >= overThresholdPercent, "Greater than " + overThresholdPercent + " above Moving Average", sound = Sound.Bell);
+
+Alert(enableAlerts and percentDiff <= -underThresholdPercent, "Greater than " + underThresholdPercent + " below Moving Average", sound = Sound.Bell);
