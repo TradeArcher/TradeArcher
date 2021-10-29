@@ -1,0 +1,55 @@
+#Volume Positive Negative Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/17/2021
+
+declare lower;
+
+input length = 30;
+input ShortMALength = 3;
+input AverageLength = 30;
+input factor = 0.1;
+input criticalValue = 10;
+input ShortMAType = AverageType.EXPONENTIAL;
+input AverageType = AverageType.SIMPLE;
+input enableGBA = yes;
+input gbaLength = 3;
+input enableAlerts = yes;
+
+def atr = WildersAverage(TrueRange(high,  close,  low), length);#ATR(length = length);#
+def diff = hlc3 - hlc3[1];
+def vp = Sum(if diff > factor * atr then volume else 0, length);
+def vn = Sum(if diff < -factor * atr then volume else 0, length);
+
+plot VPN = MovingAverage(ShortMAType, 100 * (vp - vn) / Sum(volume, length), ShortMALength);
+plot VPNAvg = MovingAverage(AverageType, VPN, AverageLength);
+plot CriticalLevel = criticalValue;
+
+VPN.DefineColor("Above", Color.UPTICK);
+VPN.DefineColor("Below", Color.DOWNTICK);
+VPN.AssignValueColor(if VPN > CriticalLevel then VPN.Color("Above") else VPN.Color("Below"));
+VPNAvg.SetDefaultColor(GetColor(7));
+CriticalLevel.SetDefaultColor(GetColor(1));
+
+def isGreen = close > open;
+
+def lastXBarGreenAvg = if(!enableGBA, yes, Average(isGreen, gbaLength) > 0);
+
+def barsBack = 15;
+
+plot BullishVPNCrossUp = if((VPN >= CriticalLevel and VPN[1] < CriticalLevel[1]) and lastXBarGreenAvg and Sum(VPN < CriticalLevel, barsBack)[1] == barsBack, CriticalLevel, Double.NaN);
+BullishVPNCrossUp.SetPaintingStrategy(paintingStrategy = PaintingStrategy.ARROW_UP);
+BullishVPNCrossUp.SetLineWeight(3);
+BullishVPNCrossUp.SetDefaultColor(Color.GREEN);
+
+plot BullishVPNAvgCrossUp = if((VPN >= VPNAvg and VPN[1] < VPNAvg[1]) and lastXBarGreenAvg and Sum(VPN < VPNAvg, barsBack)[1] == barsBack, VPNAvg, Double.NaN);
+BullishVPNAvgCrossUp.SetPaintingStrategy(paintingStrategy = PaintingStrategy.ARROW_UP);
+BullishVPNAvgCrossUp.SetLineWeight(3);
+BullishVPNAvgCrossUp.SetDefaultColor(Color.LIME);
+
+plot BullishVPNAvgCLCrossUp = if((VPNAvg >= CriticalLevel and VPNAvg[1] < CriticalLevel[1]) and lastXBarGreenAvg and Sum(VPNAvg < CriticalLevel, barsBack)[1] == barsBack, CriticalLevel, Double.NaN);
+BullishVPNAvgCLCrossUp.SetPaintingStrategy(paintingStrategy = PaintingStrategy.ARROW_UP);
+BullishVPNAvgCLCrossUp.SetLineWeight(3);
+BullishVPNAvgCLCrossUp.SetDefaultColor(Color.LIGHT_GREEN);
+
+Alert(enableAlerts and (BullishVPNCrossUp or BullishVPNAvgCrossUp or BullishVPNAvgCLCrossUp), GetSymbolPart() + "VPN Cross Up", sound = Sound.Ding);
