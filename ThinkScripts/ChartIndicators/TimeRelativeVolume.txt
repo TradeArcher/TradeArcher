@@ -1,9 +1,9 @@
 #Time Relative Volume Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.3
+#Version: 0.4
 #Date Created: 06/21/2021
 
-#hint: Calculates the simple average of the volume for the same candle over multiple days using the PeriodLookBack for the number of days.
+#hint: Calculates the simple average of the volume for the same candle over multiple days using the PeriodLookBack for the number of days along with a moving average of the volume, then it changes the color of the candle if the volume exceeds both the time of day relative volume and the movinng average for the volume.
 
 input PeriodLookBack = 21; #hint PeriodLookBack: The number of days back used to calculate the average.
 input ShowVolumeHistogram = no; #hint ShowVolumeHistogram: Whether or not to show the volume histogram bars.
@@ -12,6 +12,14 @@ input PercentAboveAverageForSignal = 300;
 declare hide_on_daily;
 declare on_volume;
 declare real_size;
+
+DefineGlobalColor("HighVolumeUp", Color.CYAN);
+DefineGlobalColor("HighVolumeDown", Color.YELLOW);
+
+def avgVol = MovingAverage(AverageType.EXPONENTIAL, volume, 21);
+
+plot AverageVolume = avgVol;
+AverageVolume.SetDefaultColor(Color.CYAN);
 
 def dayStart = 0000;
 
@@ -26,7 +34,7 @@ def barTime = Floor((SecondsFromTime(dayStart) * 1000) / currentAggregationPerio
 def volumeAtTimeSum = 
 (fold ix = 0 to PeriodLookBack with vSum do vSum + 
     (fold ixx = 0 to barsPerDay with subVSum do
-         subVSum + (if(GetValue(barTime, ((ix+1)*(ixx+1))-1) == barTime, GetValue(volume, ((ix+1)*(ixx+1))-1), 0))));
+         subVSum + (if(GetValue(barTime, ((ix+1)*(ixx+1))-1) == barTime, GetValue(volume, ((ix+1)*(ixx+1)-1)), 0))));
 
 def avgVolumeAtTime = volumeAtTimeSum / PeriodLookBack;
 
@@ -43,13 +51,19 @@ def highVolumeLevel = avgVolumeAtTime * highVolumeSignalFactor;
 plot HighVolumeSignal = if(volume >= highVolumeLevel, highVolumeLevel, Double.NaN);
 HighVolumeSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
 HighVolumeSignal.SetDefaultColor(Color.LIME);
-HighVolumeSignal.SetLineWeight(2);
+HighVolumeSignal.SetLineWeight(1);
 
 
 
 plot VolumeSignal = volume;
 VolumeSignal.SetPaintingStrategy(paintingStrategy = PaintingStrategy.HISTOGRAM);
-VolumeSignal.SetDefaultColor(Color.GRAY);
+VolumeSignal.SetDefaultColor(Color.VIOLET);
 VolumeSignal.SetHiding(!ShowVolumeHistogram);
 
-AddLabel(yes, "Avg Vol for Candle: " + avgVolumeAtTime + (if (volume >= avgVolumeAtTime) then " (ABOVE AVG)" else ""), if (volume >= highVolumeLevel) then Color.GREEN else if (volume > avgVolumeAtTime) then Color.YELLOW else Color.LIGHT_GRAY);
+def percentOfAvg = Round(((volume - avgVolumeAtTime)/ avgVolumeAtTime) * 100, 0);
+
+def isGreen = close >= open;
+
+AddLabel(yes, "Bar Avg Vol: " + avgVolumeAtTime + (if (volume >= avgVolumeAtTime) then " (" + percentOfAvg + "% > AVG)" else ""), if (volume >= highVolumeLevel) then Color.GREEN else if (volume > avgVolumeAtTime) then Color.YELLOW else Color.LIGHT_GRAY);
+
+AssignPriceColor(if HighVolumeSignal and volume > AverageVolume then if isGreen then GlobalColor("HighVolumeUp") else  GlobalColor("HighVolumeDown") else Color.CURRENT );
