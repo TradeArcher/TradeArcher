@@ -1,0 +1,20 @@
+#Acceleration, Deceleration, Accumulation, Distribution Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/30/2021
+
+input MAlength = 21;
+input MAType = AverageType.SIMPLE;
+
+def WAD = AccumDistBuyPr();
+def VMA = MovingAverage(MAType, WAD, MAlength);
+
+def vwma8 = Sum(volume * close, 8) / Sum(volume, 8);
+def vwma21 = Sum(volume * close, 21) / Sum(volume, 21);
+def vwma34 = Sum(volume * close, 34) / Sum(volume, 34);
+
+def bullish = if vwma8 > vwma21 and vwma21 > vwma34 then 1 else 0;
+def bearish = if vwma8 < vwma21 and vwma21 < vwma34 then 1 else 0;
+def distribution = if !bullish and !bearish then 1 else 0;
+
+AddLabel (yes, if bullish then "Stage: Acceleration" else if bearish then "Stage: Deceleration" else if close >= VMA then "Stage: Accumulation" else "stage: Distribution", if bullish then Color.GREEN else if bearish then Color.RED else if close >= VMA then Color.YELLOW else Color.ORANGE);
