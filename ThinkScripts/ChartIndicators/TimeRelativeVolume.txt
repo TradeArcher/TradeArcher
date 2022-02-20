@@ -1,13 +1,16 @@
 #Time Relative Volume Chart Indicator
 #Author: TradeArcher2020
-#Version: 0.4
+#Version: 0.5
 #Date Created: 06/21/2021
 
 #hint: Calculates the simple average of the volume for the same candle over multiple days using the PeriodLookBack for the number of days along with a moving average of the volume, then it changes the color of the candle if the volume exceeds both the time of day relative volume and the movinng average for the volume.
 
-input PeriodLookBack = 21; #hint PeriodLookBack: The number of days back used to calculate the average.
-input ShowVolumeHistogram = no; #hint ShowVolumeHistogram: Whether or not to show the volume histogram bars.
+input PeriodLookBack = 21; #hint: PeriodLookBack: The number of days back used to calculate the average.
+input ShowVolumeHistogram = no; #hint: ShowVolumeHistogram: Whether or not to show the volume histogram bars.
 input PercentAboveAverageForSignal = 300;
+input ChangeCandleColors = yes; #hint: toggles whether or not to change the candle colors on abnormal volume
+input ShowSignalArrows = no; #hint: toggles abnormal volume up/down arrows
+input MinVolumeLevel = 50000;
 
 declare hide_on_daily;
 declare on_volume;
@@ -66,4 +69,6 @@ def isGreen = close >= open;
 
 AddLabel(yes, "Bar Avg Vol: " + avgVolumeAtTime + (if (volume >= avgVolumeAtTime) then " (" + percentOfAvg + "% > AVG)" else ""), if (volume >= highVolumeLevel) then Color.GREEN else if (volume > avgVolumeAtTime) then Color.YELLOW else Color.LIGHT_GRAY);
 
-AssignPriceColor(if HighVolumeSignal and volume > AverageVolume then if isGreen then GlobalColor("HighVolumeUp") else  GlobalColor("HighVolumeDown") else Color.CURRENT );
+AssignPriceColor(if ChangeCandleColors then if HighVolumeSignal and volume > AverageVolume then if isGreen then GlobalColor("HighVolumeUp") else  GlobalColor("HighVolumeDown") else Color.CURRENT else Color.CURRENT );
+
+plot MinVolLine = MinVolumeLevel;
