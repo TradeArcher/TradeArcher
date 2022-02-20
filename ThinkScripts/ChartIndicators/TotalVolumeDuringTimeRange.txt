@@ -1,0 +1,110 @@
+#TotalVolumeDuringTimeRange Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/20/2021
+
+#HINT: Adds a label to your chart showing the total volumue accumulated during the selected time range.
+
+input PreSetTimeRange = {default "Intraday", "Premarket", "After Hours", "Market Open", "Zombie", "Zombie Reversal", "Power Hour", "Custom"};
+input StartTime = 0930; #Can be any time from starting from 0 (midnight)
+input EndTime = 1600; #Must be greater than the StartTime up to 2359 (one minute before midnight)
+input CustomLabelText = "Custom";
+input ShowBubbles = no;
+input BubbleLocation = {default CandleHigh, VolumeTop };
+input BubbleUp = yes;
+
+declare hide_on_daily;
+
+def isNewDay = GetDay() != GetDay()[1];
+def isAfterHours;
+
+DefineGlobalColor("LabelColor", Color.WHITE);
+
+def useDailyVolume;
+def st;
+def et;
+def isCustom;
+
+switch (PreSetTimeRange) {
+    case "Intraday":
+        useDailyVolume = yes;
+        st = 0930;
+        et = 1600;
+        isCustom = no;
+        isAfterHours = no;
+    case "Premarket":
+        useDailyVolume = no;
+        st = 0;
+        et = 0929;
+        isCustom = no;
+        isAfterHours = no;
+    case "After Hours":
+        useDailyVolume = no;
+        st = 1600;
+        et = 2359;
+        isCustom = no;
+        isAfterHours = yes;
+    case "Market Open":
+        useDailyVolume = no;
+        st = 0930;
+        et = 1029;
+        isCustom = no;
+        isAfterHours = no;
+    case "Zombie":
+        useDailyVolume = no;
+        st = 1030;
+        et = 1359;
+        isCustom = no;
+        isAfterHours = no;
+    case "Zombie Reversal":
+        useDailyVolume = no;
+        st = 1400;
+        et = 1459;
+        isCustom = no;
+        isAfterHours = no;
+    case "Power Hour":
+        useDailyVolume = no;
+        st = 1500;
+        et = 1559;
+        isCustom = no;
+        isAfterHours = no;
+    case "Custom":
+        useDailyVolume = no;
+        st = StartTime;
+        et = EndTime;
+        isCustom = yes;
+        isAfterHours = no;
+}
+
+def bl;
+switch (BubbleLocation) {
+    case CandleHigh:
+        bl = high;
+    case VolumeTop:
+        bl = volume;
+}
+
+
+def isStartTime = SecondsFromTime(st) >= 0 and SecondsTillTime(st) >= 0;
+def isEndTime = if(isAfterHours, isNewDay[-1], SecondsFromTime(et) >= 0 and SecondsTillTime(et) >= 0);
+
+def IsInTimeRange = SecondsFromTime(st) >= 0 and if(isAfterHours,  !isNewDay[-2], SecondsTillTime(et) >= 0);
+def isPastStartTime = SecondsFromTime(st) >= 0;
+def isPastEndTime = if(isAfterHours, isNewDay, SecondsFromTime(et) >= 0);
+
+def VolumeTotal = if(isNewDay, 0, if(IsInTimeRange, VolumeTotal[1] + volume, VolumeTotal[1]));
+
+
+#AddChartBubble(isAfterHours and isPastStartTime and !isPastStartTime[1], high, "AH Start");
+
+#AddChartBubble(VolumeTotal == 325, high, "VolumeTotal:"+VolumeTotal, GlobalColor("LabelColor"));
+#AddChartBubble(isNewDay, high, "isNewDay:"+VolumeTotal, GlobalColor("LabelColor"));
+#AddChartBubble(IsInTimeRange, high, "IsInTimeRange:"+VolumeTotal, GlobalColor("LabelColor"));
+#AddChartBubble(!IsInTimeRange, high, "!IsInTimeRange:"+VolumeTotal, GlobalColor("LabelColor"));
+#AddChartBubble(yes, high, PreSetTimeRange + " Volume: " + VolumeTotal, GlobalColor("LabelColor"));
+
+AddLabel(!useDailyVolume, (if isCustom then CustomLabelText else PreSetTimeRange) + " Volume: " + VolumeTotal, GlobalColor("LabelColor"));
+AddLabel(useDailyVolume and isPastStartTime, "Intraday Volume: " + Round(volume(period = AggregationPeriod.DAY) * 1), GlobalColor("LabelColor"));
+
+AddChartBubble(ShowBubbles and isEndTime and !useDailyVolume, bl, (if isCustom then CustomLabelText else PreSetTimeRange) + "\nVolume: \n" + VolumeTotal, GlobalColor("LabelColor"), up = BubbleUp);
+AddChartBubble(ShowBubbles and isEndTime and useDailyVolume, bl, "Intraday\nVolume: \n" + Round(volume(period = AggregationPeriod.DAY) * 1), GlobalColor("LabelColor"), up = BubbleUp);
