@@ -1,0 +1,68 @@
+#VWAP Recent High/Low Anchor Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 10/26/2021
+
+#This indicator will recalculate the VWAP starting from every point where the makes a new high/low withing the lookback period.
+
+input numDev1 = 1.0;
+input numDev2 = 2.0;
+input lookback = 252;
+input VWAPType = {default Low, High};
+
+def isNewHigh = Highest(high, lookback) <= high;
+def isNewLow = Lowest(low, lookback) >= low;
+
+def isPeriodRolled;
+def ol;
+
+switch (VWAPType) {
+    case Low:
+        isPeriodRolled = compoundValue(1, isNewLow != isNewLow[1], yes);
+        ol = if(isPeriodRolled, if(low[1] < low, low[1], low), ol[1]);
+    case High:
+        isPeriodRolled = compoundValue(1, isNewHigh != isNewHigh[1], yes);
+        ol = if(isPeriodRolled, if(high[1] > high, high[1], high), ol[1]);
+}
+
+def volumeSum;
+def volumeVwapSum;
+def volumeVwap2Sum;
+
+if (isPeriodRolled) {
+    volumeSum = volume[1];
+    volumeVwapSum = volume[1] * vwap[1];
+    volumeVwap2Sum = volume[1] * Sqr(vwap[1]);
+} else {
+    volumeSum = compoundValue(1, volumeSum[1] + volume[1], volume[1]);
+    volumeVwapSum = compoundValue(1, volumeVwapSum[1] + volume[1] * vwap[1], volume[1] * vwap[1]);
+    volumeVwap2Sum = compoundValue(1, volumeVwap2Sum[1] + volume[1] * Sqr(vwap[1]), volume[1] * Sqr(vwap[1]));
+}
+def price = volumeVwapSum / volumeSum;
+def deviation = Sqrt(Max(volumeVwap2Sum / volumeSum - Sqr(price), 0));
+
+DefineGlobalColor("VWAP", Color.LIGHT_ORANGE);
+
+plot OuterLine = ol;
+OuterLine.AssignValueColor(GlobalColor("VWAP"));
+
+plot VWAP = price;
+plot UpperBand = price + numDev1 * deviation;
+plot LowerBand = price - numDev1 * deviation;
+
+plot UpperBand2 = price + numDev2 * deviation;
+plot LowerBand2 = price - numDev2 * deviation;
+
+VWAP.AssignValueColor(GlobalColor("VWAP"));
+
+UpperBand.setStyle(Curve.SHORT_DASH);
+LowerBand.setStyle(Curve.SHORT_DASH);
+
+UpperBand2.setStyle(Curve.LONG_DASH);
+LowerBand2.setStyle(Curve.LONG_DASH);
+
+UpperBand.AssignValueColor(GlobalColor("VWAP"));
+LowerBand.AssignValueColor(GlobalColor("VWAP"));
+
+UpperBand2.AssignValueColor(GlobalColor("VWAP"));
+LowerBand2.AssignValueColor(GlobalColor("VWAP"));
