@@ -1,0 +1,40 @@
+#Ticker Watch Chart Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 2/10/2022
+
+#HINT: Allows you to plot a separate ticker on the lower part of your chart with a key level line to alert you if it crosses above.  Defaults to the /VX as a reversal indicator when it's price exceeds 30.  
+
+input KeyLevelValue = 30;
+input priceType = {default "high", "close", "open", "low", "hlc3", "hl2", "vwap"};
+input TickerName = "/VX";
+
+def ticker;
+switch (priceType) {
+    case "high":
+        ticker = high("/VX");
+    case "close":
+        ticker = close("/VX");
+    case "open":
+        ticker = open("/VX");
+    case "low":
+        ticker = low("/VX");
+    case "hlc3":
+        ticker = hlc3("/VX");
+    case "hl2":
+        ticker = hl2("/VX");
+    case "vwap":
+        ticker = vwap("/VX");
+}
+
+declare lower;
+
+plot TickerLine = ticker;
+
+plot KeyLevel = KeyLevelValue;
+
+def ReversalSignal = Ticker >= KeyLevel;
+
+TickerLine.AssignValueColor(if ReversalSignal then Color.GREEN else Color.WHITE);
+
+Alert(sound = Sound.Bell, condition = ReversalSignal, text = "/VX >= 30 - Potential Market Bottom");
