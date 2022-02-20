@@ -1,0 +1,342 @@
+#Spy Relative Sector Momentum Indicator
+#Author: TradeArcher2020
+#Version: 0.1
+#Date Created: 11/06/2021
+#HINT: Used to determine which sectors are advancing and which are declining relative to each other and the S&P500
+
+# XLE    Energy Select Sector SPDR Fund
+# XLF    Financial Select Sector SPDR Fund
+# XLU    Utilities Select Sector SPDR Fund
+# XLI    Industrial Select Sector SPDR Fund
+# GDX    VanEck Gold Miners ETF
+# XLK    Technology Select Sector SPDR Fund
+# XLV    Health Care Select Sector SPDR Fund
+# XLY    Consumer Discretionary Select Sector SPDR Fund
+# XLP    Consumer Staples Select Sector SPDR Fund
+# XLB    Materials Select Sector SPDR Fund
+# XOP    Spdr S&P Oil & Gas Exploration & Production Etf
+# IYR    iShares U.S. Real Estate ETF
+# XHB    Spdr S&P Homebuilders Etf
+# ITB    iShares U.S. Home Construction ETF
+# VNQ    Vanguard Real Estate Index Fund ETF Shares
+# GDXJ    VanEck Junior Gold Miners ETF
+# IYE    iShares U.S. Energy ETF
+# OIH    VanEck Oil Services ETF
+# XME    SPDR S&P Metals & Mining ETF
+# XRT    Spdr S&P Retail Etf
+# SMH    VanEck Semiconductor ETF
+# IBB    iShares Biotechnology ETF
+# KBE    SPDR S&P Bank ETF
+# KRE    SPDR S&P Regional Banking ETF
+# XTL    SPDR S&P Telecom ETF
+
+# SnP500
+# Energy
+# Financial
+# Utilities
+# Industrial
+# Technology
+# HealthCare
+# ConsumerDiscretionary
+# ConsumerStaples
+# Materials
+# OilAndGas
+# RealEstate
+# Homebuilders
+# HomeConstruction
+# MetalsAndMining
+# Retail
+# Semiconductor
+# Biotechnology
+# Banking
+# RegionalBanking
+# Telecom
+# GoldMiners
+
+input Lookback = 21;
+input MomentumLookback = 5;
+input MAType = AverageType.HULL;
+input SnP500Ticker = "SPY";
+input EnergyTicker = "XLE";
+input FinancialTicker = "XLF";
+input UtilitiesTicker = "XLU";
+input IndustrialTicker = "XLI";
+input TechnologyTicker = "XLK";
+input HealthCareTicker = "XLV";
+input ConsumerDiscretionaryTicker = "XLY";
+input ConsumerStaplesTicker = "XLP";
+input MaterialsTicker = "XLB";
+input OilAndGasTicker = "XOP";
+input RealEstateTicker = "IYR";
+input HomebuildersTicker = "XHB";
+input HomeConstructionTicker = "ITB";
+input MetalsAndMiningTicker = "XME";
+input RetailTicker = "XRT";
+input SemiconductorTicker = "SMH";
+input BiotechnologyTicker = "IBB";
+input BankingTicker = "KBE";
+input RegionalBankingTicker = "KRE";
+input TelecomTicker = "XTL";
+input GoldMinersTicker = "GDX";
+input ShowBubbles = yes;
+
+declare lower;
+
+DefineGlobalColor("SnP500", Color.WHITE);
+DefineGlobalColor("Energy", CreateColor(255, 255, 51));
+DefineGlobalColor("Financial", CreateColor(0, 102, 0));
+DefineGlobalColor("Utilities", CreateColor(204, 102, 0));
+DefineGlobalColor("Industrial", CreateColor(192, 192, 192));
+DefineGlobalColor("Technology", CreateColor(0, 128, 255));
+DefineGlobalColor("HealthCare", CreateColor(255, 51, 51));
+DefineGlobalColor("ConsumerDiscretionary", CreateColor(178, 255, 102));
+DefineGlobalColor("ConsumerStaples", CreateColor(102, 255, 255));
+DefineGlobalColor("Materials", CreateColor(128, 128, 128));
+DefineGlobalColor("OilAndGas", CreateColor(153, 76, 0));
+DefineGlobalColor("RealEstate", CreateColor(153, 0, 153));
+DefineGlobalColor("Homebuilders", CreateColor(102, 0, 204));
+DefineGlobalColor("HomeConstruction", CreateColor(0, 0, 255));
+DefineGlobalColor("MetalsAndMining", CreateColor(96, 96, 96));
+DefineGlobalColor("Retail", CreateColor(0, 153, 153));
+DefineGlobalColor("Semiconductor", CreateColor(153, 204, 255));
+DefineGlobalColor("Biotechnology", CreateColor(255, 0, 255));
+DefineGlobalColor("Banking", CreateColor(0, 255, 128));
+DefineGlobalColor("RegionalBanking", CreateColor(178, 255, 102));
+DefineGlobalColor("Telecom", CreateColor(255, 153, 153));
+DefineGlobalColor("GoldMiners", CreateColor(204, 204, 0));
+
+def SnP500Price = close(SnP500Ticker);
+def EnergyPrice = close(EnergyTicker);
+def FinancialPrice = close(FinancialTicker);
+def UtilitiesPrice = close(UtilitiesTicker);
+def IndustrialPrice = close(IndustrialTicker);
+def TechnologyPrice = close(TechnologyTicker);
+def HealthCarePrice = close(HealthCareTicker);
+def ConsumerDiscretionaryPrice = close(ConsumerDiscretionaryTicker);
+def ConsumerStaplesPrice = close(ConsumerStaplesTicker);
+def MaterialsPrice = close(MaterialsTicker);
+def OilAndGasPrice = close(OilAndGasTicker);
+def RealEstatePrice = close(RealEstateTicker);
+def HomebuildersPrice = close(HomebuildersTicker);
+def HomeConstructionPrice = close(HomeConstructionTicker);
+def MetalsAndMiningPrice = close(MetalsAndMiningTicker);
+def RetailPrice = close(RetailTicker);
+def SemiconductorPrice = close(SemiconductorTicker);
+def BiotechnologyPrice = close(BiotechnologyTicker);
+def BankingPrice = close(BankingTicker);
+def RegionalBankingPrice = close(RegionalBankingTicker);
+def TelecomPrice = close(TelecomTicker);
+def GoldMinersPrice = close(GoldMinersTicker);
+
+#def SnP500
+def EnergyPctDiff = ((EnergyPrice - SnP500Price) / SnP500Price) * 100;
+def FinancialPctDiff = ((FinancialPrice - SnP500Price) / SnP500Price) * 100;
+def UtilitiesPctDiff = ((UtilitiesPrice - SnP500Price) / SnP500Price) * 100;
+def IndustrialPctDiff = ((IndustrialPrice - SnP500Price) / SnP500Price) * 100;
+def TechnologyPctDiff = ((TechnologyPrice - SnP500Price) / SnP500Price) * 100;
+def HealthCarePctDiff = ((HealthCarePrice - SnP500Price) / SnP500Price) * 100;
+def ConsumerDiscretionaryPctDiff = ((ConsumerDiscretionaryPrice - SnP500Price) / SnP500Price) * 100;
+def ConsumerStaplesPctDiff = ((ConsumerStaplesPrice - SnP500Price) / SnP500Price) * 100;
+def MaterialsPctDiff = ((MaterialsPrice - SnP500Price) / SnP500Price) * 100;
+def OilAndGasPctDiff = ((OilAndGasPrice - SnP500Price) / SnP500Price) * 100;
+def RealEstatePctDiff = ((RealEstatePrice - SnP500Price) / SnP500Price) * 100;
+def HomebuildersPctDiff = ((HomebuildersPrice - SnP500Price) / SnP500Price) * 100;
+def HomeConstructionPctDiff = ((HomeConstructionPrice - SnP500Price) / SnP500Price) * 100;
+def MetalsAndMiningPctDiff = ((MetalsAndMiningPrice - SnP500Price) / SnP500Price) * 100;
+def RetailPctDiff = ((RetailPrice - SnP500Price) / SnP500Price) * 100;
+def SemiconductorPctDiff = ((SemiconductorPrice - SnP500Price) / SnP500Price) * 100;
+def BiotechnologyPctDiff = ((BiotechnologyPrice - SnP500Price) / SnP500Price) * 100;
+def BankingPctDiff = ((BankingPrice - SnP500Price) / SnP500Price) * 100;
+def RegionalBankingPctDiff = ((RegionalBankingPrice - SnP500Price) / SnP500Price) * 100;
+def TelecomPctDiff = ((TelecomPrice - SnP500Price) / SnP500Price) * 100;
+def GoldMinersPctDiff = ((GoldMinersPrice - SnP500Price) / SnP500Price) * 100;
+
+def EnergyPctDiffMA = MovingAverage(MAType, EnergyPctDiff, Lookback);
+def FinancialPctDiffMA = MovingAverage(MAType, FinancialPctDiff, Lookback);
+def UtilitiesPctDiffMA = MovingAverage(MAType, UtilitiesPctDiff, Lookback);
+def IndustrialPctDiffMA = MovingAverage(MAType, IndustrialPctDiff, Lookback);
+def TechnologyPctDiffMA = MovingAverage(MAType, TechnologyPctDiff, Lookback);
+def HealthCarePctDiffMA = MovingAverage(MAType, HealthCarePctDiff, Lookback);
+def ConsumerDiscretionaryPctDiffMA = MovingAverage(MAType, ConsumerDiscretionaryPctDiff, Lookback);
+def ConsumerStaplesPctDiffMA = MovingAverage(MAType, ConsumerStaplesPctDiff, Lookback);
+def MaterialsPctDiffMA = MovingAverage(MAType, MaterialsPctDiff, Lookback);
+def OilAndGasPctDiffMA = MovingAverage(MAType, OilAndGasPctDiff, Lookback);
+def RealEstatePctDiffMA = MovingAverage(MAType, RealEstatePctDiff, Lookback);
+def HomebuildersPctDiffMA = MovingAverage(MAType, HomebuildersPctDiff, Lookback);
+def HomeConstructionPctDiffMA = MovingAverage(MAType, HomeConstructionPctDiff, Lookback);
+def MetalsAndMiningPctDiffMA = MovingAverage(MAType, MetalsAndMiningPctDiff, Lookback);
+def RetailPctDiffMA = MovingAverage(MAType, RetailPctDiff, Lookback);
+def SemiconductorPctDiffMA = MovingAverage(MAType, SemiconductorPctDiff, Lookback);
+def BiotechnologyPctDiffMA = MovingAverage(MAType, BiotechnologyPctDiff, Lookback);
+def BankingPctDiffMA = MovingAverage(MAType, BankingPctDiff, Lookback);
+def RegionalBankingPctDiffMA = MovingAverage(MAType, RegionalBankingPctDiff, Lookback);
+def TelecomPctDiffMA = MovingAverage(MAType, TelecomPctDiff, Lookback);
+def GoldMinersPctDiffMA = MovingAverage(MAType, GoldMinersPctDiff, Lookback);
+
+plot SnP500 = 0;
+SnP500.SetDefaultColor(GlobalColor("SnP500"));
+plot Energy = 100 - EnergyPctDiffMA/EnergyPctDiffMA[MomentumLookback] * 100;
+Energy.SetDefaultColor(GlobalColor("Energy"));
+plot Financial = 100 - FinancialPctDiffMA/FinancialPctDiffMA[MomentumLookback] * 100;
+Financial.SetDefaultColor(GlobalColor("Financial"));
+plot Utilities = 100 - UtilitiesPctDiffMA/UtilitiesPctDiffMA[MomentumLookback] * 100;
+Utilities.SetDefaultColor(GlobalColor("Utilities"));
+plot Industrial = 100 - IndustrialPctDiffMA/IndustrialPctDiffMA[MomentumLookback] * 100;
+Industrial.SetDefaultColor(GlobalColor("Industrial"));
+plot Technology = 100 - TechnologyPctDiffMA/TechnologyPctDiffMA[MomentumLookback] * 100;
+Technology.SetDefaultColor(GlobalColor("Technology"));
+plot HealthCare = 100 - HealthCarePctDiffMA/HealthCarePctDiffMA[MomentumLookback] * 100;
+HealthCare.SetDefaultColor(GlobalColor("HealthCare"));
+plot ConsumerDiscretionary = 100 - ConsumerDiscretionaryPctDiffMA/ConsumerDiscretionaryPctDiffMA[MomentumLookback] * 100;
+ConsumerDiscretionary.SetDefaultColor(GlobalColor("ConsumerDiscretionary"));
+plot ConsumerStaples = 100 - ConsumerStaplesPctDiffMA/ConsumerStaplesPctDiffMA[MomentumLookback] * 100;
+ConsumerStaples.SetDefaultColor(GlobalColor("ConsumerStaples"));
+plot Materials = 100 - MaterialsPctDiffMA/MaterialsPctDiffMA[MomentumLookback] * 100;
+Materials.SetDefaultColor(GlobalColor("Materials"));
+plot OilAndGas = 100 - OilAndGasPctDiffMA/OilAndGasPctDiffMA[MomentumLookback] * 100;
+OilAndGas.SetDefaultColor(GlobalColor("OilAndGas"));
+plot RealEstate = 100 - RealEstatePctDiffMA/RealEstatePctDiffMA[MomentumLookback] * 100;
+RealEstate.SetDefaultColor(GlobalColor("RealEstate"));
+plot Homebuilders = 100 - HomebuildersPctDiffMA/HomebuildersPctDiffMA[MomentumLookback] * 100;
+Homebuilders.SetDefaultColor(GlobalColor("Homebuilders"));
+plot HomeConstruction = 100 - HomeConstructionPctDiffMA/HomeConstructionPctDiffMA[MomentumLookback] * 100;
+HomeConstruction.SetDefaultColor(GlobalColor("HomeConstruction"));
+plot MetalsAndMining = 100 - MetalsAndMiningPctDiffMA/MetalsAndMiningPctDiffMA[MomentumLookback] * 100;
+MetalsAndMining.SetDefaultColor(GlobalColor("MetalsAndMining"));
+plot Retail = 100 - RetailPctDiffMA/RetailPctDiffMA[MomentumLookback] * 100;
+Retail.SetDefaultColor(GlobalColor("Retail"));
+plot Semiconductor = 100 - SemiconductorPctDiffMA/SemiconductorPctDiffMA[MomentumLookback] * 100;
+Semiconductor.SetDefaultColor(GlobalColor("Semiconductor"));
+plot Biotechnology = 100 - BiotechnologyPctDiffMA/BiotechnologyPctDiffMA[MomentumLookback] * 100;
+Biotechnology.SetDefaultColor(GlobalColor("Biotechnology"));
+plot Banking = 100 - BankingPctDiffMA/BankingPctDiffMA[MomentumLookback] * 100;
+Banking.SetDefaultColor(GlobalColor("Banking"));
+plot RegionalBanking = 100 - RegionalBankingPctDiffMA/RegionalBankingPctDiffMA[MomentumLookback] * 100;
+RegionalBanking.SetDefaultColor(GlobalColor("RegionalBanking"));
+plot Telecom = 100 - TelecomPctDiffMA/TelecomPctDiffMA[MomentumLookback] * 100;
+Telecom.SetDefaultColor(GlobalColor("Telecom"));
+plot GoldMiners = 100 - GoldMinersPctDiffMA/GoldMinersPctDiffMA[MomentumLookback] * 100;
+GoldMiners.SetDefaultColor(GlobalColor("GoldMiners"));
+
+AddLabel(yes, "S&P500", GlobalColor("SnP500"));
+AddLabel(yes, "Energy: " + Round(Energy, 2), GlobalColor("Energy"));
+AddLabel(yes, "Financial: " + Round(Financial, 2), GlobalColor("Financial"));
+AddLabel(yes, "Utilities: " + Round(Utilities, 2), GlobalColor("Utilities"));
+AddLabel(yes, "Industrial: " + Round(Industrial, 2), GlobalColor("Industrial"));
+AddLabel(yes, "Technology: " + Round(Technology, 2), GlobalColor("Technology"));
+AddLabel(yes, "HealthCare: " + Round(HealthCare, 2), GlobalColor("HealthCare"));
+AddLabel(yes, "Consumer Discretionary: " + Round(ConsumerDiscretionary, 2), GlobalColor("ConsumerDiscretionary"));
+AddLabel(yes, "Consumer Staples: " + Round(ConsumerStaples, 2), GlobalColor("ConsumerStaples"));
+AddLabel(yes, "Materials: " + Round(Materials, 2), GlobalColor("Materials"));
+AddLabel(yes, "OilAndGas: " + Round(OilAndGas, 2), GlobalColor("OilAndGas"));
+AddLabel(yes, "Real-Estate: " + Round(RealEstate, 2), GlobalColor("RealEstate"));
+AddLabel(yes, "Home Builders: " + Round(Homebuilders, 2), GlobalColor("Homebuilders"));
+AddLabel(yes, "HomeConstruction: " + Round(HomeConstruction, 2), GlobalColor("HomeConstruction"));
+AddLabel(yes, "Metals And Mining: " + Round(MetalsAndMining, 2), GlobalColor("MetalsAndMining"));
+AddLabel(yes, "Retail: " + Round(Retail, 2), GlobalColor("Retail"));
+AddLabel(yes, "Semiconductor: " + Round(Semiconductor, 2), GlobalColor("Semiconductor"));
+AddLabel(yes, "Biotechnology: " + Round(Biotechnology, 2), GlobalColor("Biotechnology"));
+AddLabel(yes, "Banking: " + Round(Banking, 2), GlobalColor("Banking"));
+AddLabel(yes, "Regional Banking: " + Round(RegionalBanking, 2), GlobalColor("RegionalBanking"));
+AddLabel(yes, "Telecom: " + Round(Telecom, 2), GlobalColor("Telecom"));
+AddLabel(yes, "Gold Miners: " + Round(GoldMiners, 2), GlobalColor("GoldMiners"));
+
+
+
+
+
+
+
+
+
+
+plot EnergyPivot = if((Energy[1] < Energy[0] and Energy[0] > Energy[-1]) or (Energy[1] > Energy[0] and Energy[0] < Energy[-1]), Energy, Double.NaN);
+EnergyPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+EnergyPivot.SetDefaultColor(GlobalColor("Energy"));
+plot FinancialPivot = if((Financial[1] < Financial[0] and Financial[0] > Financial[-1]) or (Financial[1] > Financial[0] and Financial[0] < Financial[-1]), Financial, Double.NaN);
+FinancialPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+FinancialPivot.SetDefaultColor(GlobalColor("Financial"));
+plot UtilitiesPivot = if((Utilities[1] < Utilities[0] and Utilities[0] > Utilities[-1]) or (Utilities[1] > Utilities[0] and Utilities[0] < Utilities[-1]), Utilities, Double.NaN);
+UtilitiesPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+UtilitiesPivot.SetDefaultColor(GlobalColor("Utilities"));
+plot IndustrialPivot = if((Industrial[1] < Industrial[0] and Industrial[0] > Industrial[-1]) or (Industrial[1] > Industrial[0] and Industrial[0] < Industrial[-1]), Industrial, Double.NaN);
+IndustrialPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+IndustrialPivot.SetDefaultColor(GlobalColor("Industrial"));
+plot TechnologyPivot = if((Technology[1] < Technology[0] and Technology[0] > Technology[-1]) or (Technology[1] > Technology[0] and Technology[0] < Technology[-1]), Technology, Double.NaN);
+TechnologyPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+TechnologyPivot.SetDefaultColor(GlobalColor("Technology"));
+plot HealthCarePivot = if((HealthCare[1] < HealthCare[0] and HealthCare[0] > HealthCare[-1]) or (HealthCare[1] > HealthCare[0] and HealthCare[0] < HealthCare[-1]), HealthCare, Double.NaN);
+HealthCarePivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+HealthCarePivot.SetDefaultColor(GlobalColor("HealthCare"));
+plot ConsumerDiscretionaryPivot = if((ConsumerDiscretionary[1] < ConsumerDiscretionary[0] and ConsumerDiscretionary[0] > ConsumerDiscretionary[-1]) or (ConsumerDiscretionary[1] > ConsumerDiscretionary[0] and ConsumerDiscretionary[0] < ConsumerDiscretionary[-1]), ConsumerDiscretionary, Double.NaN);
+ConsumerDiscretionaryPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+ConsumerDiscretionaryPivot.SetDefaultColor(GlobalColor("ConsumerDiscretionary"));
+plot ConsumerStaplesPivot = if((ConsumerStaples[1] < ConsumerStaples[0] and ConsumerStaples[0] > ConsumerStaples[-1]) or (ConsumerStaples[1] > ConsumerStaples[0] and ConsumerStaples[0] < ConsumerStaples[-1]), ConsumerStaples, Double.NaN);
+ConsumerStaplesPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+ConsumerStaplesPivot.SetDefaultColor(GlobalColor("ConsumerStaples"));
+plot MaterialsPivot = if((Materials[1] < Materials[0] and Materials[0] > Materials[-1]) or (Materials[1] > Materials[0] and Materials[0] < Materials[-1]), Materials, Double.NaN);
+MaterialsPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+MaterialsPivot.SetDefaultColor(GlobalColor("Materials"));
+plot OilAndGasPivot = if((OilAndGas[1] < OilAndGas[0] and OilAndGas[0] > OilAndGas[-1]) or (OilAndGas[1] > OilAndGas[0] and OilAndGas[0] < OilAndGas[-1]), OilAndGas, Double.NaN);
+OilAndGasPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+OilAndGasPivot.SetDefaultColor(GlobalColor("OilAndGas"));
+plot RealEstatePivot = if((RealEstate[1] < RealEstate[0] and RealEstate[0] > RealEstate[-1]) or (RealEstate[1] > RealEstate[0] and RealEstate[0] < RealEstate[-1]), RealEstate, Double.NaN);
+RealEstatePivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+RealEstatePivot.SetDefaultColor(GlobalColor("RealEstate"));
+plot HomebuildersPivot = if((Homebuilders[1] < Homebuilders[0] and Homebuilders[0] > Homebuilders[-1]) or (Homebuilders[1] > Homebuilders[0] and Homebuilders[0] < Homebuilders[-1]), Homebuilders, Double.NaN);
+HomebuildersPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+HomebuildersPivot.SetDefaultColor(GlobalColor("Homebuilders"));
+plot HomeConstructionPivot = if((HomeConstruction[1] < HomeConstruction[0] and HomeConstruction[0] > HomeConstruction[-1]) or (HomeConstruction[1] > HomeConstruction[0] and HomeConstruction[0] < HomeConstruction[-1]), HomeConstruction, Double.NaN);
+HomeConstructionPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+HomeConstructionPivot.SetDefaultColor(GlobalColor("HomeConstruction"));
+plot MetalsAndMiningPivot = if((MetalsAndMining[1] < MetalsAndMining[0] and MetalsAndMining[0] > MetalsAndMining[-1]) or (MetalsAndMining[1] > MetalsAndMining[0] and MetalsAndMining[0] < MetalsAndMining[-1]), MetalsAndMining, Double.NaN);
+MetalsAndMiningPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+MetalsAndMiningPivot.SetDefaultColor(GlobalColor("MetalsAndMining"));
+plot RetailPivot = if((Retail[1] < Retail[0] and Retail[0] > Retail[-1]) or (Retail[1] > Retail[0] and Retail[0] < Retail[-1]), Retail, Double.NaN);
+RetailPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+RetailPivot.SetDefaultColor(GlobalColor("Retail"));
+plot SemiconductorPivot = if((Semiconductor[1] < Semiconductor[0] and Semiconductor[0] > Semiconductor[-1]) or (Semiconductor[1] > Semiconductor[0] and Semiconductor[0] < Semiconductor[-1]), Semiconductor, Double.NaN);
+SemiconductorPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+SemiconductorPivot.SetDefaultColor(GlobalColor("Semiconductor"));
+plot BiotechnologyPivot = if((Biotechnology[1] < Biotechnology[0] and Biotechnology[0] > Biotechnology[-1]) or (Biotechnology[1] > Biotechnology[0] and Biotechnology[0] < Biotechnology[-1]), Biotechnology, Double.NaN);
+BiotechnologyPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+BiotechnologyPivot.SetDefaultColor(GlobalColor("Biotechnology"));
+plot BankingPivot = if((Banking[1] < Banking[0] and Banking[0] > Banking[-1]) or (Banking[1] > Banking[0] and Banking[0] < Banking[-1]), Banking, Double.NaN);
+BankingPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+BankingPivot.SetDefaultColor(GlobalColor("Banking"));
+plot RegionalBankingPivot = if((RegionalBanking[1] < RegionalBanking[0] and RegionalBanking[0] > RegionalBanking[-1]) or (RegionalBanking[1] > RegionalBanking[0] and RegionalBanking[0] < RegionalBanking[-1]), RegionalBanking, Double.NaN);
+RegionalBankingPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+RegionalBankingPivot.SetDefaultColor(GlobalColor("RegionalBanking"));
+plot TelecomPivot = if((Telecom[1] < Telecom[0] and Telecom[0] > Telecom[-1]) or (Telecom[1] > Telecom[0] and Telecom[0] < Telecom[-1]), Telecom, Double.NaN);
+TelecomPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+TelecomPivot.SetDefaultColor(GlobalColor("Telecom"));
+plot GoldMinersPivot = if((GoldMiners[1] < GoldMiners[0] and GoldMiners[0] > GoldMiners[-1]) or (GoldMiners[1] > GoldMiners[0] and GoldMiners[0] < GoldMiners[-1]), GoldMiners, Double.NaN);
+GoldMinersPivot.SetPaintingStrategy(paintingStrategy = PaintingStrategy.TRIANGLES);
+GoldMinersPivot.SetDefaultColor(GlobalColor("GoldMiners"));
+
+
+
+
+AddChartBubble(ShowBubbles and !IsNaN(EnergyPivot) and Sum(!IsNaN(EnergyPivot[-50]), 50) <= 0, EnergyPivot, "Energy", GlobalColor("Energy"));
+AddChartBubble(ShowBubbles and !IsNaN(FinancialPivot) and Sum(!IsNaN(FinancialPivot[-50]), 50) <= 0, FinancialPivot, "Financial", GlobalColor("Financial"));
+AddChartBubble(ShowBubbles and !IsNaN(UtilitiesPivot) and Sum(!IsNaN(UtilitiesPivot[-50]), 50) <= 0, UtilitiesPivot, "Utilities", GlobalColor("Utilities"));
+AddChartBubble(ShowBubbles and !IsNaN(IndustrialPivot) and Sum(!IsNaN(IndustrialPivot[-50]), 50) <= 0, IndustrialPivot, "Industrial", GlobalColor("Industrial"));
+AddChartBubble(ShowBubbles and !IsNaN(TechnologyPivot) and Sum(!IsNaN(TechnologyPivot[-50]), 50) <= 0, TechnologyPivot, "Technology", GlobalColor("Technology"));
+AddChartBubble(ShowBubbles and !IsNaN(HealthCarePivot) and Sum(!IsNaN(HealthCarePivot[-50]), 50) <= 0, HealthCarePivot, "HealthCare", GlobalColor("HealthCare"));
+AddChartBubble(ShowBubbles and !IsNaN(ConsumerDiscretionaryPivot) and Sum(!IsNaN(ConsumerDiscretionaryPivot[-50]), 50) <= 0, ConsumerDiscretionaryPivot, "ConsumerDiscretionary", GlobalColor("ConsumerDiscretionary"));
+AddChartBubble(ShowBubbles and !IsNaN(ConsumerStaplesPivot) and Sum(!IsNaN(ConsumerStaplesPivot[-50]), 50) <= 0, ConsumerStaplesPivot, "ConsumerStaples", GlobalColor("ConsumerStaples"));
+AddChartBubble(ShowBubbles and !IsNaN(MaterialsPivot) and Sum(!IsNaN(MaterialsPivot[-50]), 50) <= 0, MaterialsPivot, "Materials", GlobalColor("Materials"));
+AddChartBubble(ShowBubbles and !IsNaN(OilAndGasPivot) and Sum(!IsNaN(OilAndGasPivot[-50]), 50) <= 0, OilAndGasPivot, "OilAndGas", GlobalColor("OilAndGas"));
+AddChartBubble(ShowBubbles and !IsNaN(RealEstatePivot) and Sum(!IsNaN(RealEstatePivot[-50]), 50) <= 0, RealEstatePivot, "RealEstate", GlobalColor("RealEstate"));
+AddChartBubble(ShowBubbles and !IsNaN(HomebuildersPivot) and Sum(!IsNaN(HomebuildersPivot[-50]), 50) <= 0, HomebuildersPivot, "Homebuilders", GlobalColor("Homebuilders"));
+AddChartBubble(ShowBubbles and !IsNaN(HomeConstructionPivot) and Sum(!IsNaN(HomeConstructionPivot[-50]), 50) <= 0, HomeConstructionPivot, "HomeConstruction", GlobalColor("HomeConstruction"));
+AddChartBubble(ShowBubbles and !IsNaN(MetalsAndMiningPivot) and Sum(!IsNaN(MetalsAndMiningPivot[-50]), 50) <= 0, MetalsAndMiningPivot, "MetalsAndMining", GlobalColor("MetalsAndMining"));
+AddChartBubble(ShowBubbles and !IsNaN(RetailPivot) and Sum(!IsNaN(RetailPivot[-50]), 50) <= 0, RetailPivot, "Retail", GlobalColor("Retail"));
+AddChartBubble(ShowBubbles and !IsNaN(SemiconductorPivot) and Sum(!IsNaN(SemiconductorPivot[-50]), 50) <= 0, SemiconductorPivot, "Semiconductor", GlobalColor("Semiconductor"));
+AddChartBubble(ShowBubbles and !IsNaN(BiotechnologyPivot) and Sum(!IsNaN(BiotechnologyPivot[-50]), 50) <= 0, BiotechnologyPivot, "Biotechnology", GlobalColor("Biotechnology"));
+AddChartBubble(ShowBubbles and !IsNaN(BankingPivot) and Sum(!IsNaN(BankingPivot[-50]), 50) <= 0, BankingPivot, "Banking", GlobalColor("Banking"));
+AddChartBubble(ShowBubbles and !IsNaN(RegionalBankingPivot) and Sum(!IsNaN(RegionalBankingPivot[-50]), 50) <= 0, RegionalBankingPivot, "RegionalBanking", GlobalColor("RegionalBanking"));
+AddChartBubble(ShowBubbles and !IsNaN(TelecomPivot) and Sum(!IsNaN(TelecomPivot[-50]), 50) <= 0, TelecomPivot, "Telecom", GlobalColor("Telecom"));
+AddChartBubble(ShowBubbles and !IsNaN(GoldMinersPivot) and Sum(!IsNaN(GoldMinersPivot[-50]), 50) <= 0, GoldMinersPivot, "GoldMiners", GlobalColor("GoldMiners"));
+
+
